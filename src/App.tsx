@@ -23,18 +23,15 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Crear plano rojo
+    // Crear plano rojo en la "superficie de la esfera"
     const geometry = new THREE.PlaneGeometry(2, 2)
     const material = new THREE.MeshBasicMaterial({ color: 'red', side: THREE.DoubleSide })
     plane = new THREE.Mesh(geometry, material)
-    plane.position.set(0, 0, -3)
+    plane.position.set(0, 0, -5) // A una distancia del centro
     scene.add(plane)
 
-    // Agregar luz ambiental
-    const light = new THREE.AmbientLight(0xffffff, 1)
-    scene.add(light)
+    camera.position.set(0, 0, 0) // Cámara en el centro de la esfera
 
-    camera.position.z = 0
     window.addEventListener('resize', onWindowResize)
   }
 
@@ -62,13 +59,16 @@ const GyroScene = () => {
   const animate = () => {
     requestAnimationFrame(animate)
 
-    // Usar valores del giroscopio para actualizar la rotación del plano
-    plane.rotation.set(
-      THREE.MathUtils.degToRad(beta),
-      THREE.MathUtils.degToRad(gamma),
-      THREE.MathUtils.degToRad(alpha)
-    )
+    // Ajustar orientación de la cámara en base al giroscopio
+    const phi = THREE.MathUtils.degToRad(beta) // Inclinación vertical
+    const theta = THREE.MathUtils.degToRad(alpha) // Rotación horizontal
 
+    const radius = 5 // Distancia a la "superficie de la esfera"
+    const x = radius * Math.sin(phi) * Math.cos(theta)
+    const y = radius * Math.cos(phi)
+    const z = radius * Math.sin(phi) * Math.sin(theta)
+
+    camera.lookAt(new THREE.Vector3(x, y, z))
     renderer.render(scene, camera)
   }
 
