@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import * as THREE from 'three'
 
 const DISTANCE = 25
+const SIZE = 5
 
 const GyroScene = () => {
   const mountRef = useRef<HTMLDivElement>(null)
@@ -36,7 +37,7 @@ const GyroScene = () => {
     ]
 
     positions.forEach(({ pos, rot, color }) => {
-      const geometry = new THREE.PlaneGeometry(2, 2)
+      const geometry = new THREE.PlaneGeometry(SIZE, SIZE)
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       plane.position.set(...pos)
@@ -56,17 +57,25 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Capturar datos del giroscopio y actualizar la orientación de la cámara
+  let lastRotation = new THREE.Euler(0, 0, 0)
+
   const startSensors = () => {
     window.addEventListener(
       'deviceorientation',
       (event) => {
-        // Obtiene los valores de orientación del dispositivo
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0 // Rotación alrededor del eje Z
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación alrededor del eje X
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación alrededor del eje Y
-        // Actualiza la rotación de la cámara
-        camera.rotation.set(beta, gamma, alpha)
+        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0
+        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
+        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
+
+        // Interpolación de las rotaciones
+        const targetRotation = new THREE.Euler(beta, gamma, alpha)
+        lastRotation = new THREE.Euler(
+          THREE.MathUtils.lerp(lastRotation.x, targetRotation.x, 0.1),
+          THREE.MathUtils.lerp(lastRotation.y, targetRotation.y, 0.1),
+          THREE.MathUtils.lerp(lastRotation.z, targetRotation.z, 0.1)
+        )
+
+        camera.rotation.set(lastRotation.x, lastRotation.y, lastRotation.z)
       },
       true
     )
