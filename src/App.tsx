@@ -5,10 +5,6 @@ import * as THREE from 'three'
 const DISTANCE = 25
 const SIZE = 5
 
-function radToDeg(radians: number) {
-  return (radians * 180) / Math.PI
-}
-
 const GyroScene = () => {
   const mountRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
@@ -71,22 +67,24 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
-        // Ajustar la velocidad de rotación
-        const rotationSpeed = 0.01 // Factor de velocidad para la rotación de la cámara
+        const targetQuaternion = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(beta, alpha, -gamma, 'XYZ')
+        )
 
-        // Aquí solo rotamos la cámara alrededor del eje Y
-        camera.rotation.y = alpha * rotationSpeed // Solo utilizamos alpha para rotar en el eje Y
-
-        camera.rotation.x = beta * rotationSpeed // Rotación en el eje X
-
-        camera.rotation.z = gamma * rotationSpeed // Rotación en el eje Z
+        // Aplicar la rotación a la cámara
+        camera.quaternion.slerp(targetQuaternion, 0.1) // Suavizar la rotación
+        camera.position.set(0, 0, DISTANCE) // Mantener la cámara a una distancia fija
+        camera.lookAt(0, 0, 0) // Mirar al centro de la escena
+        // Actualizar la posición de la cámara
+        camera.updateProjectionMatrix()
+        camera.updateMatrixWorld()
 
         // Mostrar los valores de orientación
         if (logElement.current) {
           logElement.current.textContent = `
-            Alpha: ${radToDeg(alpha).toFixed(2)}°\n
-            Beta: ${radToDeg(beta).toFixed(2)}°\n
-            Gamma: ${radToDeg(gamma).toFixed(2)}°
+            Alpha: ${(event.alpha || 0).toFixed(2)}°\n
+            Beta: ${(event.beta || 0).toFixed(2)}°\n
+            Gamma: ${(event.gamma || 0).toFixed(2)}°
           `
         }
 
