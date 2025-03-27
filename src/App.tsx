@@ -65,13 +65,13 @@ const GyroScene = () => {
     window.addEventListener(
       'deviceorientation',
       (event) => {
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
+        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0 // Rotación alrededor del eje Z (izquierda/derecha)
+        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación alrededor del eje X (arriba/abajo)
 
-        // Crear una nueva rotación a partir de los ángulos, usando el orden adecuado
+        // Ajustar la rotación para la cámara en función de alpha y beta
+        // 'YXZ' asegura que primero gire sobre el eje Y (izquierda/derecha), luego sobre el eje X (arriba/abajo)
         const targetQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(beta, alpha, -gamma, 'YXZ')
+          new THREE.Euler(beta, alpha, 0, 'YXZ')
         )
 
         // Suavizar la rotación usando esferas de interpolación (slerp)
