@@ -10,7 +10,6 @@ const GyroScene = () => {
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
-  let plane: THREE.Mesh
   let alpha = 0,
     beta = 0,
     gamma = 0
@@ -23,12 +22,28 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Crear plano rojo en la superficie de una esfera imaginaria
-    const geometry = new THREE.PlaneGeometry(2, 2)
-    const material = new THREE.MeshBasicMaterial({ color: 'red', side: THREE.DoubleSide })
-    plane = new THREE.Mesh(geometry, material)
-    plane.position.set(0, 0, -5) // Alejado de la cámara en el eje Z
-    scene.add(plane)
+    // Crear planos de diferentes colores en las seis direcciones
+    const positions = [
+      { pos: [0, 0, -5], color: 'red' }, // Adelante
+      { pos: [0, 0, 5], color: 'blue' }, // Atrás
+      { pos: [0, 5, 0], color: 'green' }, // Arriba
+      { pos: [0, -5, 0], color: 'yellow' }, // Abajo
+      { pos: [-5, 0, 0], color: 'purple' }, // Izquierda
+      { pos: [5, 0, 0], color: 'orange' }, // Derecha
+    ]
+
+    positions.forEach(({ pos, color }) => {
+      const geometry = new THREE.PlaneGeometry(2, 2)
+      const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+      const plane = new THREE.Mesh(geometry, material)
+      //A spread argument must either have a tuple type or be passed to a rest parameter.
+      // plane.position.set(...pos)
+      plane.position.x = pos[0]
+      plane.position.y = pos[1]
+      plane.position.z = pos[2]
+
+      scene.add(plane)
+    })
 
     camera.position.set(0, 0, 0) // Cámara en el centro
 
