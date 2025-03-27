@@ -23,14 +23,14 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Crear plano rojo en la "superficie de la esfera"
+    // Crear plano rojo en la superficie de una esfera imaginaria
     const geometry = new THREE.PlaneGeometry(2, 2)
     const material = new THREE.MeshBasicMaterial({ color: 'red', side: THREE.DoubleSide })
     plane = new THREE.Mesh(geometry, material)
-    plane.position.set(0, 0, -5) // A una distancia del centro
+    plane.position.set(0, 0, -5) // Alejado de la cámara en el eje Z
     scene.add(plane)
 
-    camera.position.set(0, 0, 0) // Cámara en el centro de la esfera
+    camera.position.set(0, 0, 0) // Cámara en el centro
 
     window.addEventListener('resize', onWindowResize)
   }
@@ -42,7 +42,7 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Capturar datos del giroscopio
+  // Capturar datos del giroscopio y actualizar la orientación de la cámara
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
       alpha = event.alpha ?? 0
@@ -52,23 +52,18 @@ const GyroScene = () => {
       if (logElement.current) {
         logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
+
+      camera.rotation.set(
+        THREE.MathUtils.degToRad(beta),
+        THREE.MathUtils.degToRad(gamma),
+        THREE.MathUtils.degToRad(alpha)
+      )
     })
   }
 
   // Animación
   const animate = () => {
     requestAnimationFrame(animate)
-
-    // Ajustar orientación de la cámara en base al giroscopio
-    const phi = THREE.MathUtils.degToRad(beta) // Inclinación vertical
-    const theta = THREE.MathUtils.degToRad(alpha) // Rotación horizontal
-
-    const radius = 5 // Distancia a la "superficie de la esfera"
-    const x = radius * Math.sin(phi) * Math.cos(theta)
-    const y = radius * Math.cos(phi)
-    const z = radius * Math.sin(phi) * Math.sin(theta)
-
-    camera.lookAt(new THREE.Vector3(x, y, z))
     renderer.render(scene, camera)
   }
 
