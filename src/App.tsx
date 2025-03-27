@@ -24,20 +24,22 @@ const GyroScene = () => {
 
     // Crear planos de diferentes colores en las seis direcciones
     const positions = [
-      { pos: [0, 0, -5], color: 'red' }, // Adelante
-      { pos: [0, 0, 5], color: 'blue' }, // Atrás
-      { pos: [0, 5, 0], color: 'green' }, // Arriba
-      { pos: [0, -5, 0], color: 'yellow' }, // Abajo
-      { pos: [-5, 0, 0], color: 'purple' }, // Izquierda
-      { pos: [5, 0, 0], color: 'orange' }, // Derecha
+      { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
+      { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
+      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
+      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
+      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
+      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
-    positions.forEach(({ pos, color }) => {
+    positions.forEach(({ pos, rot, color }) => {
       const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
-      // @ts-expect-error test
+      // @ts-expect-error no types
       plane.position.set(...pos)
+      // @ts-expect-error no types
+      plane.rotation.set(...rot)
       scene.add(plane)
     })
 
