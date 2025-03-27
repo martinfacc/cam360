@@ -14,8 +14,6 @@ const GyroScene = () => {
     beta = 0,
     gamma = 0
 
-  const rotationMatrix = new THREE.Matrix4() // Para acumular las rotaciones
-
   // Inicializar escena
   const init = () => {
     scene = new THREE.Scene()
@@ -62,12 +60,13 @@ const GyroScene = () => {
   // Capturar datos del giroscopio y actualizar la orientación de la cámara
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
-      alpha = event.alpha ?? 0
-      beta = event.beta ?? 0
-      gamma = event.gamma ?? 0
+      // Tomar solo valores enteros
+      alpha = Math.floor(event.alpha ?? 0)
+      beta = Math.floor(event.beta ?? 0)
+      gamma = Math.floor(event.gamma ?? 0)
 
       if (logElement.current) {
-        logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
+        logElement.current.textContent = `alpha: ${alpha}, beta: ${beta}, gamma: ${gamma}`
       }
 
       // Convertir los valores a radianes
@@ -78,13 +77,10 @@ const GyroScene = () => {
         'XYZ'
       )
 
-      // Aplicar la rotación al Matrix
-      const rotationMatrixTemp = new THREE.Matrix4().identity()
-      rotationMatrixTemp.makeRotationFromEuler(rotation)
-      rotationMatrix.multiply(rotationMatrixTemp) // Acumular las rotaciones
-
-      // Actualizar la cámara con la rotación acumulada
-      camera.rotation.setFromRotationMatrix(rotationMatrix)
+      // Aplicar la rotación al cámara
+      camera.rotation.x = rotation.x
+      camera.rotation.y = rotation.y
+      camera.rotation.z = rotation.z
     })
   }
 
