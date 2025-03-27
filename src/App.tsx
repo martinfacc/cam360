@@ -13,6 +13,9 @@ const GyroScene = () => {
   let alpha = 0,
     beta = 0,
     gamma = 0
+  let prevAlpha = 0,
+    prevBeta = 0,
+    prevGamma = 0
 
   // Inicializar escena
   const init = () => {
@@ -68,6 +71,22 @@ const GyroScene = () => {
       if (logElement.current) {
         logElement.current.textContent = `alpha: ${alpha}, beta: ${beta}, gamma: ${gamma}`
       }
+
+      // Suavizar y corregir saltos en alpha, beta y gamma
+      if (Math.abs(alpha - prevAlpha) > 180) {
+        alpha = prevAlpha + (alpha > 0 ? -360 : 360) // Corregir el salto de 360 grados
+      }
+      if (Math.abs(beta - prevBeta) > 90) {
+        beta = prevBeta + (beta > 0 ? -180 : 180) // Corregir el salto de 180 grados
+      }
+      if (Math.abs(gamma - prevGamma) > 90) {
+        gamma = prevGamma + (gamma > 0 ? -180 : 180) // Corregir el salto de 180 grados
+      }
+
+      // Actualizar los valores previos
+      prevAlpha = alpha
+      prevBeta = beta
+      prevGamma = gamma
 
       // Convertir los valores a radianes
       const rotation = new THREE.Euler(
