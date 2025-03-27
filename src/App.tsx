@@ -69,9 +69,9 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
 
-        // Crear una nueva rotación a partir de los ángulos
+        // Crear una nueva rotación a partir de los ángulos, usando el orden adecuado
         const targetQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(beta, gamma, alpha, 'YXZ')
+          new THREE.Euler(beta, alpha, -gamma, 'YXZ')
         )
 
         // Suavizar la rotación usando esferas de interpolación (slerp)
