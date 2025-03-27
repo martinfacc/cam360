@@ -7,38 +7,46 @@ const GyroScene = () => {
   const startButtonRef = useRef<HTMLButtonElement>(null)
   const logElement = useRef<HTMLDivElement>(null)
   const [started, setStarted] = useState(false)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
+
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
-  let videoTexture: THREE.VideoTexture | null = null
   let alpha = 0,
     beta = 0,
     gamma = 0
 
-  // Inicializar la escena y los elementos
-  const init = async () => {
+  const init = async (deviceId: string) => {
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Acceder a la cámara del usuario y crear una textura de video
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    // Acceder a la cámara del usuario usando el deviceId
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: deviceId ? { exact: deviceId } : undefined },
+    })
     const video = document.createElement('video')
-    video.srcObject = stream
+    video.srcObject = newStream
     video.play()
 
     // Crear la textura de la cámara
-    videoTexture = new THREE.VideoTexture(video)
-    videoTexture.minFilter = THREE.LinearFilter
-    videoTexture.magFilter = THREE.LinearFilter
-    videoTexture.format = THREE.RGBFormat
+    const newVideoTexture = new THREE.VideoTexture(video)
+    newVideoTexture.minFilter = THREE.LinearFilter
+    newVideoTexture.magFilter = THREE.LinearFilter
+    newVideoTexture.format = THREE.RGBFormat
+
+    setStream(newStream)
+    setVideoTexture(newVideoTexture)
 
     // Crear un plano gigante de fondo para la cámara (estático)
     const backgroundGeometry = new THREE.PlaneGeometry(200, 200)
     const backgroundMaterial = new THREE.MeshBasicMaterial({
-      map: videoTexture,
+      map: newVideoTexture,
       side: THREE.DoubleSide,
     })
     const backgroundPlane = new THREE.Mesh(backgroundGeometry, backgroundMaterial)
@@ -46,7 +54,11 @@ const GyroScene = () => {
     scene.add(backgroundPlane)
 
     // Crear planos con diferentes colores, pero solo los planos se moverán
-    const positions = [
+    const positions: Array<{
+      pos: [number, number, number]
+      rot: [number, number, number]
+      color: string
+    }> = [
       { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
       { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
@@ -60,9 +72,7 @@ const GyroScene = () => {
       const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
-      // @ts-expect-error no types
       plane.position.set(...pos)
-      // @ts-expect-error no types
       plane.rotation.set(...rot)
       scene.add(plane)
     })
@@ -124,9 +134,27 @@ const GyroScene = () => {
     startButtonRef.current!.style.display = 'none'
     if (logElement.current) logElement.current.textContent = 'Capturando datos...'
 
-    await init()
+    await init(currentDeviceId || '')
     startSensors()
     animate()
+  }
+
+  // Cambiar la cámara (delante/atrás)
+  const switchCamera = async () => {
+    if (stream) {
+      // Detener la transmisión de la cámara anterior
+      stream.getTracks().forEach((track) => track.stop())
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const videoDevices = devices.filter((device) => device.kind === 'videoinput')
+
+    // Encontrar el siguiente dispositivo de cámara
+    const nextDevice = videoDevices.find((device) => device.deviceId !== currentDeviceId)
+    if (nextDevice) {
+      setCurrentDeviceId(nextDevice.deviceId)
+      await init(nextDevice.deviceId)
+    }
   }
 
   return (
@@ -140,6 +168,12 @@ const GyroScene = () => {
           Comenzar
         </button>
       )}
+      <button
+        onClick={switchCamera}
+        className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg"
+      >
+        Cambiar Cámara
+      </button>
       <div
         ref={logElement}
         className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white p-2 text-sm rounded"
