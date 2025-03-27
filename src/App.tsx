@@ -65,9 +65,9 @@ const GyroScene = () => {
     window.addEventListener(
       'deviceorientation',
       (event) => {
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
+        const alpha = event.alpha || 0
+        const beta = event.beta || 0
+        const gamma = event.gamma || 0
 
         // Crear una nueva rotación a partir de los ángulos, usando el orden adecuado
         const targetQuaternion = new THREE.Quaternion().setFromEuler(
@@ -80,13 +80,9 @@ const GyroScene = () => {
         // Actualizar la rotación de la cámara con el quaternion suavizado
         camera.rotation.setFromQuaternion(lastQuaternion)
 
-        // Mostrar los valores de orientación
+        // Mostrar los datos en grados
         if (logElement.current) {
-          logElement.current.textContent = `
-            Alpha: ${alpha.toFixed(2)}°\n
-            Beta: ${beta.toFixed(2)}°\n
-            Gamma: ${gamma.toFixed(2)}°
-          `
+          logElement.current.textContent = `Alpha: ${alpha.toFixed(2)}° | Beta: ${beta.toFixed(2)}° | Gamma: ${gamma.toFixed(2)}°`
         }
       },
       true
