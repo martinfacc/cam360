@@ -22,7 +22,7 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Crear planos de diferentes colores en las seis direcciones
+    // Crear planos en las seis direcciones con su rotación para que sean perpendiculares
     const positions = [
       { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
@@ -43,7 +43,7 @@ const GyroScene = () => {
       scene.add(plane)
     })
 
-    camera.position.set(0, 0, 0) // Cámara en el centro
+    camera.position.set(0, 0, 0) // La cámara permanece en el centro
 
     window.addEventListener('resize', onWindowResize)
   }
@@ -55,7 +55,7 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Capturar datos del giroscopio y actualizar la orientación de la cámara
+  // Capturar datos del giroscopio y actualizar la rotación de la escena
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
       alpha = event.alpha ?? 0
@@ -63,13 +63,16 @@ const GyroScene = () => {
       gamma = event.gamma ?? 0
 
       if (logElement.current) {
-        logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
+        logElement.current.textContent = `alpha: ${alpha.toFixed(
+          2
+        )}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      camera.rotation.set(
-        THREE.MathUtils.degToRad(beta),
-        THREE.MathUtils.degToRad(gamma),
-        THREE.MathUtils.degToRad(alpha)
+      // Rotar la escena en sentido inverso al dispositivo para simular que el teléfono está en el centro
+      scene.rotation.set(
+        THREE.MathUtils.degToRad(-beta),
+        THREE.MathUtils.degToRad(-gamma),
+        THREE.MathUtils.degToRad(-alpha)
       )
     })
   }
