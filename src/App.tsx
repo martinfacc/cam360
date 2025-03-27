@@ -57,7 +57,9 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  let lastRotation = new THREE.Euler(0, 0, 0)
+  // Usar cuaterniones para evitar problemas de interpolación angular
+  const lastQuaternion = new THREE.Quaternion()
+  const smoothingFactor = 0.1 // Puedes ajustar esto para mayor o menor suavidad
 
   const startSensors = () => {
     window.addEventListener(
@@ -67,15 +69,16 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
 
-        // Interpolación de las rotaciones
-        const targetRotation = new THREE.Euler(beta, gamma, alpha)
-        lastRotation = new THREE.Euler(
-          THREE.MathUtils.lerp(lastRotation.x, targetRotation.x, 0.1),
-          THREE.MathUtils.lerp(lastRotation.y, targetRotation.y, 0.1),
-          THREE.MathUtils.lerp(lastRotation.z, targetRotation.z, 0.1)
+        // Crear una nueva rotación a partir de los ángulos
+        const targetQuaternion = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(beta, gamma, alpha, 'YXZ')
         )
 
-        camera.rotation.set(lastRotation.x, lastRotation.y, lastRotation.z)
+        // Suavizar la rotación usando esferas de interpolación (slerp)
+        lastQuaternion.slerp(targetQuaternion, smoothingFactor)
+
+        // Actualizar la rotación de la cámara con el quaternion suavizado
+        camera.rotation.setFromQuaternion(lastQuaternion)
       },
       true
     )
