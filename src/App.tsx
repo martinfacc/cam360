@@ -73,11 +73,9 @@ const GyroScene = () => {
 
         // Aplicar la rotación a la cámara
         camera.quaternion.slerp(targetQuaternion, 0.1) // Suavizar la rotación
-        camera.position.set(0, 0, DISTANCE) // Mantener la cámara a una distancia fija
-        camera.lookAt(0, 0, 0) // Mirar al centro de la escena
-        // Actualizar la posición de la cámara
-        camera.updateProjectionMatrix()
-        camera.updateMatrixWorld()
+
+        // Actualizar la rotación de la cámara con el quaternion suavizado
+        camera.rotation.setFromQuaternion(targetQuaternion)
 
         // Mostrar los valores de orientación
         if (logElement.current) {
