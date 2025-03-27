@@ -67,15 +67,22 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
-        const targetQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(beta, alpha, -gamma, 'XYZ')
+        camera.rotation.set(
+          alpha,
+          beta,
+          gamma,
+          'ZXY' // Orden de rotación
         )
 
-        // Aplicar la rotación a la cámara
-        camera.quaternion.slerp(targetQuaternion, 0.1) // Suavizar la rotación
+        // const targetQuaternion = new THREE.Quaternion().setFromEuler(
+        //   new THREE.Euler(beta, alpha, -gamma, 'XYZ')
+        // )
 
-        // Actualizar la rotación de la cámara con el quaternion suavizado
-        camera.rotation.setFromQuaternion(targetQuaternion)
+        // // Aplicar la rotación a la cámara
+        // camera.quaternion.slerp(targetQuaternion, 0.1) // Suavizar la rotación
+
+        // // Actualizar la rotación de la cámara con el quaternion suavizado
+        // camera.rotation.setFromQuaternion(targetQuaternion)
 
         // Mostrar los valores de orientación
         if (logElement.current) {
