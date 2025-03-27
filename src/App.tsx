@@ -10,31 +10,42 @@ const GyroScene = () => {
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
+  let videoTexture: THREE.VideoTexture | null = null
   let alpha = 0,
     beta = 0,
     gamma = 0
 
-  // Inicializar escena
-  const init = () => {
+  const init = async () => {
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Crear planos en las seis direcciones con su rotación para que sean perpendiculares
+    // Acceder a la cámara del usuario y crear una textura de video
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    const video = document.createElement('video')
+    video.srcObject = stream
+    video.play()
+
+    videoTexture = new THREE.VideoTexture(video)
+    videoTexture.minFilter = THREE.LinearFilter
+    videoTexture.magFilter = THREE.LinearFilter
+    videoTexture.format = THREE.RGBFormat
+
+    // Crear planos con la textura de la cámara
     const positions = [
-      { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
-      { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
-      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
-      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
-      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
-      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
+      { pos: [0, 0, -5], rot: [0, 0, 0] }, // Adelante
+      { pos: [0, 0, 5], rot: [0, Math.PI, 0] }, // Atrás
+      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0] }, // Arriba
+      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0] }, // Abajo
+      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0] }, // Izquierda
+      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0] }, // Derecha
     ]
 
-    positions.forEach(({ pos, rot, color }) => {
-      const geometry = new THREE.PlaneGeometry(2, 2)
-      const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+    positions.forEach(({ pos, rot }) => {
+      const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
+      const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       // @ts-expect-error no types
       plane.position.set(...pos)
@@ -43,19 +54,17 @@ const GyroScene = () => {
       scene.add(plane)
     })
 
-    camera.position.set(0, 0, 0) // La cámara permanece en el centro
+    camera.position.set(0, 0, 0)
 
     window.addEventListener('resize', onWindowResize)
   }
 
-  // Ajustar tamaño en cambio de ventana
   const onWindowResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Capturar datos del giroscopio y actualizar la rotación de la escena
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
       alpha = event.alpha ?? 0
@@ -68,7 +77,7 @@ const GyroScene = () => {
         )}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      // Rotar la escena en sentido inverso al dispositivo para simular que el teléfono está en el centro
+      // Rotar la escena inversamente al dispositivo
       scene.rotation.set(
         THREE.MathUtils.degToRad(-beta),
         THREE.MathUtils.degToRad(-gamma),
@@ -77,13 +86,11 @@ const GyroScene = () => {
     })
   }
 
-  // Animación
   const animate = () => {
     requestAnimationFrame(animate)
     renderer.render(scene, camera)
   }
 
-  // Manejar inicio con permisos
   const handleStart = async () => {
     // @ts-expect-error no types
     if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
@@ -99,7 +106,7 @@ const GyroScene = () => {
     startButtonRef.current!.style.display = 'none'
     if (logElement.current) logElement.current.textContent = 'Capturando datos...'
 
-    init()
+    await init()
     startSensors()
     animate()
   }
