@@ -1,83 +1,82 @@
-import React, { useState, useEffect, useRef } from 'react'
+'use client'
+import { useRef, useState } from 'react'
 import * as THREE from 'three'
 
-const App: React.FC = () => {
+const GyroScene = () => {
+  const mountRef = useRef<HTMLDivElement>(null)
+  const startButtonRef = useRef<HTMLButtonElement>(null)
+  const logElement = useRef<HTMLDivElement>(null)
   const [started, setStarted] = useState(false)
-  const logElement = useRef<HTMLDivElement | null>(null)
-  const startButtonRef = useRef<HTMLButtonElement | null>(null)
+  let scene: THREE.Scene
+  let camera: THREE.PerspectiveCamera
+  let renderer: THREE.WebGLRenderer
+  let plane: THREE.Mesh
+  let alpha = 0,
+    beta = 0,
+    gamma = 0
 
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const planeRef = useRef<THREE.Mesh | null>(null)
+  // Inicializar escena
+  const init = () => {
+    scene = new THREE.Scene()
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+    renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    mountRef.current?.appendChild(renderer.domElement)
 
+    // Crear plano rojo
+    const geometry = new THREE.PlaneGeometry(2, 2)
+    const material = new THREE.MeshBasicMaterial({ color: 'red', side: THREE.DoubleSide })
+    plane = new THREE.Mesh(geometry, material)
+    plane.position.set(0, 0, -3)
+    scene.add(plane)
+
+    // Agregar luz ambiental
+    const light = new THREE.AmbientLight(0xffffff, 1)
+    scene.add(light)
+
+    camera.position.z = 0
+    window.addEventListener('resize', onWindowResize)
+  }
+
+  // Ajustar tamaño en cambio de ventana
+  const onWindowResize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    renderer.setSize(window.innerWidth, window.innerHeight)
+  }
+
+  // Capturar datos del giroscopio
   const startSensors = () => {
-    window.addEventListener('deviceorientation', handleOrientation, true)
-    window.addEventListener('devicemotion', handleMotion, true)
+    window.addEventListener('deviceorientation', (event) => {
+      alpha = event.alpha ?? 0
+      beta = event.beta ?? 0
+      gamma = event.gamma ?? 0
+
+      if (logElement.current) {
+        logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
+      }
+    })
   }
 
-  const handleOrientation = (event: DeviceOrientationEvent) => {
-    const alpha = event.alpha ?? 0
-    const beta = event.beta ?? 0
-    const gamma = event.gamma ?? 0
-
-    if (logElement.current) {
-      logElement.current.textContent = `Alpha: ${alpha.toFixed(
-        2
-      )}°\nBeta: ${beta.toFixed(2)}°\nGamma: ${gamma.toFixed(2)}°`
-    }
-
-    if (started && cameraRef.current) {
-      cameraRef.current.rotation.set(
-        THREE.MathUtils.degToRad(beta),
-        THREE.MathUtils.degToRad(gamma),
-        THREE.MathUtils.degToRad(alpha)
-      )
-    }
-  }
-
-  const handleMotion = (event: DeviceMotionEvent) => {
-    const acceleration = event.acceleration
-    if (acceleration && logElement.current) {
-      logElement.current.textContent = `Acc. X: ${acceleration.x?.toFixed(
-        2
-      )}\nAcc. Y: ${acceleration.y?.toFixed(2)}\nAcc. Z: ${acceleration.z?.toFixed(2)}`
-    }
-  }
-
-  const initThree = () => {
-    sceneRef.current = new THREE.Scene()
-    cameraRef.current = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    )
-    rendererRef.current = new THREE.WebGLRenderer()
-    rendererRef.current.setSize(window.innerWidth, window.innerHeight)
-    document.body.appendChild(rendererRef.current.domElement)
-
-    // Crear el plano rojo
-    const geometry = new THREE.PlaneGeometry(5, 5)
-    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    planeRef.current = new THREE.Mesh(geometry, material)
-    sceneRef.current.add(planeRef.current)
-
-    cameraRef.current.position.z = 10
-  }
-
+  // Animación
   const animate = () => {
-    if (started && rendererRef.current && sceneRef.current && cameraRef.current) {
-      requestAnimationFrame(animate)
-      rendererRef.current.render(sceneRef.current, cameraRef.current)
-    }
+    requestAnimationFrame(animate)
+
+    // Usar valores del giroscopio para actualizar la rotación del plano
+    plane.rotation.set(
+      THREE.MathUtils.degToRad(beta),
+      THREE.MathUtils.degToRad(gamma),
+      THREE.MathUtils.degToRad(alpha)
+    )
+
+    renderer.render(scene, camera)
   }
 
+  // Manejar inicio con permisos
   const handleStart = async () => {
-    // Verificar si estamos en un dispositivo Apple
-    // @ts-expect-error faltan las definiciones de tipos
+    // @ts-expect-error no types
     if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
-      // @ts-expect-error faltan las definiciones de tipos
+      // @ts-expect-error no types
       const permission = await DeviceOrientationEvent.requestPermission()
       if (permission !== 'granted') {
         alert('Se necesita permiso para acceder al giroscopio. Por favor, acepta la solicitud.')
@@ -86,58 +85,33 @@ const App: React.FC = () => {
     }
 
     setStarted(true)
-    if (startButtonRef.current) {
-      startButtonRef.current.style.display = 'none'
-    }
-    if (logElement.current) {
-      logElement.current.textContent = 'Capturando datos...'
-    }
+    startButtonRef.current!.style.display = 'none'
+    if (logElement.current) logElement.current.textContent = 'Capturando datos...'
+
+    init()
     startSensors()
     animate()
   }
 
-  useEffect(() => {
-    initThree()
-  }, [])
-
   return (
-    <div>
+    <div ref={mountRef} className="relative w-full h-screen">
+      {!started && (
+        <button
+          ref={startButtonRef}
+          onClick={handleStart}
+          className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded shadow-lg"
+        >
+          Comenzar
+        </button>
+      )}
       <div
         ref={logElement}
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          padding: '10px',
-          fontSize: '16px',
-          zIndex: 10,
-        }}
+        className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white p-2 text-sm rounded"
       >
-        Esperando... (no se capturan datos aún)
+        Esperando inicio...
       </div>
-      <button
-        ref={startButtonRef}
-        onClick={handleStart}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          padding: '10px 20px',
-          fontSize: '18px',
-          backgroundColor: '#ff5733',
-          color: 'white',
-          border: 'none',
-          cursor: 'pointer',
-          zIndex: 10,
-        }}
-      >
-        Comenzar
-      </button>
     </div>
   )
 }
 
-export default App
+export default GyroScene
