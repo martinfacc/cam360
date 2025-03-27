@@ -15,6 +15,7 @@ const GyroScene = () => {
     beta = 0,
     gamma = 0
 
+  // Inicializar la escena y los elementos
   const init = async () => {
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -34,7 +35,7 @@ const GyroScene = () => {
     videoTexture.magFilter = THREE.LinearFilter
     videoTexture.format = THREE.RGBFormat
 
-    // Crear un plano gigante de fondo para la cámara
+    // Crear un plano gigante de fondo para la cámara (estático)
     const backgroundGeometry = new THREE.PlaneGeometry(200, 200)
     const backgroundMaterial = new THREE.MeshBasicMaterial({
       map: videoTexture,
@@ -44,7 +45,7 @@ const GyroScene = () => {
     backgroundPlane.position.set(0, 0, -50) // Colocarlo lejos del centro para que cubra todo el fondo
     scene.add(backgroundPlane)
 
-    // Crear planos con diferentes colores
+    // Crear planos con diferentes colores, pero solo los planos se moverán
     const positions = [
       { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
@@ -54,6 +55,7 @@ const GyroScene = () => {
       { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
+    // Crear los planos con los colores
     positions.forEach(({ pos, rot, color }) => {
       const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
@@ -76,6 +78,7 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
+  // Función para manejar el giroscopio
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
       alpha = event.alpha ?? 0
@@ -88,12 +91,16 @@ const GyroScene = () => {
         )}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      // Rotar la escena inversamente al dispositivo
-      scene.rotation.set(
-        THREE.MathUtils.degToRad(-beta),
-        THREE.MathUtils.degToRad(-gamma),
-        THREE.MathUtils.degToRad(-alpha)
-      )
+      // Aplicar la rotación a todos los planos en la escena (excepto el fondo)
+      scene.children.forEach((child) => {
+        if (child instanceof THREE.Mesh && child !== scene.children[0]) {
+          child.rotation.set(
+            THREE.MathUtils.degToRad(beta),
+            THREE.MathUtils.degToRad(gamma),
+            THREE.MathUtils.degToRad(alpha)
+          )
+        }
+      })
     })
   }
 
