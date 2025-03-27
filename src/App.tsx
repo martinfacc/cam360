@@ -34,7 +34,7 @@ const GyroScene = () => {
     videoTexture.magFilter = THREE.LinearFilter
     videoTexture.format = THREE.RGBFormat
 
-    // Crear un plano gigante de fondo para la cámara (estático)
+    // Crear un plano gigante de fondo para la cámara
     const backgroundGeometry = new THREE.PlaneGeometry(200, 200)
     const backgroundMaterial = new THREE.MeshBasicMaterial({
       map: videoTexture,
@@ -44,7 +44,7 @@ const GyroScene = () => {
     backgroundPlane.position.set(0, 0, -50) // Colocarlo lejos del centro para que cubra todo el fondo
     scene.add(backgroundPlane)
 
-    // Crear planos con diferentes colores, pero solo los planos se moverán
+    // Crear planos con diferentes colores
     const positions = [
       { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
@@ -58,8 +58,10 @@ const GyroScene = () => {
       const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
-      plane.position.set(pos[0], pos[1], pos[2])
-      plane.rotation.set(rot[0], rot[1], rot[2])
+      // @ts-expect-error no types
+      plane.position.set(...pos)
+      // @ts-expect-error no types
+      plane.rotation.set(...rot)
       scene.add(plane)
     })
 
@@ -86,16 +88,12 @@ const GyroScene = () => {
         )}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      // Rotar solo los planos con los datos del giroscopio
-      scene.children.forEach((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.rotation.set(
-            THREE.MathUtils.degToRad(beta),
-            THREE.MathUtils.degToRad(gamma),
-            THREE.MathUtils.degToRad(alpha)
-          )
-        }
-      })
+      // Rotar la escena inversamente al dispositivo
+      scene.rotation.set(
+        THREE.MathUtils.degToRad(-beta),
+        THREE.MathUtils.degToRad(-gamma),
+        THREE.MathUtils.degToRad(-alpha)
+      )
     })
   }
 
