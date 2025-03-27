@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react'
 import * as THREE from 'three'
 
+const DISTANCE = 25
+
 const GyroScene = () => {
   const mountRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
@@ -25,12 +27,12 @@ const GyroScene = () => {
       rot: [number, number, number]
       color: string
     }> = [
-      { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
-      { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
-      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
-      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
-      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
-      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
+      { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
+      { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
+      { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
+      { pos: [0, -DISTANCE, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
+      { pos: [-DISTANCE, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
+      { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
     positions.forEach(({ pos, rot, color }) => {
