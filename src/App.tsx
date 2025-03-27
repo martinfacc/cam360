@@ -67,7 +67,11 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
-        camera.rotation.set(beta, alpha, -gamma, 'XYZ')
+        const modAlpha = alpha % (Math.PI * 2)
+        const modBeta = beta % (Math.PI * 2)
+        const modGamma = gamma % (Math.PI * 2)
+
+        camera.rotation.set(modBeta, modAlpha, -modGamma, 'XYZ')
 
         // const targetQuaternion = new THREE.Quaternion().setFromEuler(
         //   new THREE.Euler(beta, alpha, -gamma, 'XYZ')
