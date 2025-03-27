@@ -7,11 +7,6 @@ const GyroScene = () => {
   const startButtonRef = useRef<HTMLButtonElement>(null)
   const logElement = useRef<HTMLDivElement>(null)
   const [started, setStarted] = useState(false)
-  const [stream, setStream] = useState<MediaStream | null>(null)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
-  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null)
-
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
@@ -19,41 +14,15 @@ const GyroScene = () => {
     beta = 0,
     gamma = 0
 
-  const init = async (deviceId: string) => {
+  // Inicializar escena
+  const init = () => {
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
     mountRef.current?.appendChild(renderer.domElement)
 
-    // Acceder a la cámara del usuario usando el deviceId
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { deviceId: deviceId ? { exact: deviceId } : undefined },
-    })
-    const video = document.createElement('video')
-    video.srcObject = newStream
-    video.play()
-
-    // Crear la textura de la cámara
-    const newVideoTexture = new THREE.VideoTexture(video)
-    newVideoTexture.minFilter = THREE.LinearFilter
-    newVideoTexture.magFilter = THREE.LinearFilter
-    newVideoTexture.format = THREE.RGBFormat
-
-    setStream(newStream)
-    setVideoTexture(newVideoTexture)
-
-    // Crear un plano gigante de fondo para la cámara (estático)
-    const backgroundGeometry = new THREE.PlaneGeometry(200, 200)
-    const backgroundMaterial = new THREE.MeshBasicMaterial({
-      map: newVideoTexture,
-      side: THREE.DoubleSide,
-    })
-    const backgroundPlane = new THREE.Mesh(backgroundGeometry, backgroundMaterial)
-    backgroundPlane.position.set(0, 0, -50) // Colocarlo lejos del centro para que cubra todo el fondo
-    scene.add(backgroundPlane)
-
-    // Crear planos con diferentes colores, pero solo los planos se moverán
+    // Crear planos de diferentes colores en las seis direcciones
     const positions: Array<{
       pos: [number, number, number]
       rot: [number, number, number]
@@ -67,9 +36,8 @@ const GyroScene = () => {
       { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
-    // Crear los planos con los colores
     positions.forEach(({ pos, rot, color }) => {
-      const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
+      const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       plane.position.set(...pos)
@@ -77,18 +45,19 @@ const GyroScene = () => {
       scene.add(plane)
     })
 
-    camera.position.set(0, 0, 0)
+    camera.position.set(0, 0, 0) // Cámara en el centro
 
     window.addEventListener('resize', onWindowResize)
   }
 
+  // Ajustar tamaño en cambio de ventana
   const onWindowResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Función para manejar el giroscopio
+  // Capturar datos del giroscopio y actualizar la orientación de la cámara
   const startSensors = () => {
     window.addEventListener('deviceorientation', (event) => {
       alpha = event.alpha ?? 0
@@ -96,29 +65,24 @@ const GyroScene = () => {
       gamma = event.gamma ?? 0
 
       if (logElement.current) {
-        logElement.current.textContent = `alpha: ${alpha.toFixed(
-          2
-        )}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
+        logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      // Aplicar la rotación a todos los planos en la escena (excepto el fondo)
-      scene.children.forEach((child) => {
-        if (child instanceof THREE.Mesh && child !== scene.children[0]) {
-          child.rotation.set(
-            THREE.MathUtils.degToRad(beta),
-            THREE.MathUtils.degToRad(gamma),
-            THREE.MathUtils.degToRad(alpha)
-          )
-        }
-      })
+      camera.rotation.set(
+        THREE.MathUtils.degToRad(beta),
+        THREE.MathUtils.degToRad(gamma),
+        THREE.MathUtils.degToRad(alpha)
+      )
     })
   }
 
+  // Animación
   const animate = () => {
     requestAnimationFrame(animate)
     renderer.render(scene, camera)
   }
 
+  // Manejar inicio con permisos
   const handleStart = async () => {
     // @ts-expect-error no types
     if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
@@ -134,27 +98,9 @@ const GyroScene = () => {
     startButtonRef.current!.style.display = 'none'
     if (logElement.current) logElement.current.textContent = 'Capturando datos...'
 
-    await init(currentDeviceId || '')
+    init()
     startSensors()
     animate()
-  }
-
-  // Cambiar la cámara (delante/atrás)
-  const switchCamera = async () => {
-    if (stream) {
-      // Detener la transmisión de la cámara anterior
-      stream.getTracks().forEach((track) => track.stop())
-    }
-
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    const videoDevices = devices.filter((device) => device.kind === 'videoinput')
-
-    // Encontrar el siguiente dispositivo de cámara
-    const nextDevice = videoDevices.find((device) => device.deviceId !== currentDeviceId)
-    if (nextDevice) {
-      setCurrentDeviceId(nextDevice.deviceId)
-      await init(nextDevice.deviceId)
-    }
   }
 
   return (
@@ -168,12 +114,6 @@ const GyroScene = () => {
           Comenzar
         </button>
       )}
-      <button
-        onClick={switchCamera}
-        className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow-lg"
-      >
-        Cambiar Cámara
-      </button>
       <div
         ref={logElement}
         className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white p-2 text-sm rounded"
