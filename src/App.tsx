@@ -73,20 +73,16 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
 
-        // Evitar que gamma cause saltos de 180 grados al hacer la interpolación
-        const correctedGamma =
-          gamma > Math.PI ? gamma - 2 * Math.PI : gamma < -Math.PI ? gamma + 2 * Math.PI : gamma
-
         // Crear una nueva rotación a partir de los ángulos, usando el orden adecuado
         const targetQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(beta, alpha, correctedGamma, 'YXZ')
+          new THREE.Euler(beta, alpha, -gamma, 'YXZ')
         )
 
         // Suavizar la rotación usando esferas de interpolación (slerp)
         lastQuaternion.slerp(targetQuaternion, smoothingFactor)
 
         // Actualizar la rotación de la cámara con el quaternion suavizado
-        camera.rotation.setFromQuaternion(lastQuaternion)
+        camera.rotation.setFromQuaternion(targetQuaternion)
 
         // Mostrar los valores de orientación
         if (logElement.current) {
