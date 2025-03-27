@@ -13,6 +13,8 @@ const GyroScene = () => {
   let alpha = 0,
     beta = 0,
     gamma = 0
+  const targetRotation = new THREE.Euler(0, 0, 0)
+  const currentRotation = new THREE.Euler(0, 0, 0)
 
   // Inicializar escena
   const init = () => {
@@ -68,11 +70,19 @@ const GyroScene = () => {
         logElement.current.textContent = `alpha: ${alpha.toFixed(2)}, beta: ${beta.toFixed(2)}, gamma: ${gamma.toFixed(2)}`
       }
 
-      camera.rotation.set(
+      // Usar interpolación para un movimiento más suave
+      targetRotation.set(
         THREE.MathUtils.degToRad(beta),
         THREE.MathUtils.degToRad(gamma),
         THREE.MathUtils.degToRad(alpha)
       )
+
+      // Interpolación entre la rotación actual y la rotación objetivo
+      currentRotation.x = THREE.MathUtils.lerp(currentRotation.x, targetRotation.x, 0.1)
+      currentRotation.y = THREE.MathUtils.lerp(currentRotation.y, targetRotation.y, 0.1)
+      currentRotation.z = THREE.MathUtils.lerp(currentRotation.z, targetRotation.z, 0.1)
+
+      camera.rotation.set(currentRotation.x, currentRotation.y, currentRotation.z)
     })
   }
 
