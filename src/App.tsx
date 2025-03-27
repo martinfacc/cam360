@@ -61,40 +61,48 @@ const GyroScene = () => {
     renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  // Usar cuaterniones para evitar problemas de interpolación angular
-  const lastQuaternion = new THREE.Quaternion()
-  const smoothingFactor = 0.1 // Puedes ajustar esto para mayor o menor suavidad
-
   const startSensors = () => {
-    window.addEventListener(
-      'deviceorientation',
-      (event) => {
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0
+    // Este código asume que tienes un listener de eventos para detectar el movimiento del giroscopio
+    window.addEventListener('deviceorientation', (event) => {
+      // Convertir los valores de alpha, beta, gamma de grados a radianes
+      const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0 // Rotación sobre el eje Z
+      const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X
+      const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y
 
-        // Crear una nueva rotación a partir de los ángulos, usando el orden adecuado
-        const targetQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(beta, alpha, -gamma, 'YXZ')
-        )
+      // Ajustar la velocidad de rotación y traslación
+      const rotationSpeed = 0.01 // Factor de velocidad para la rotación de la cámara
+      const movementSpeed = 0.1 // Factor de velocidad para el movimiento de la cámara
 
-        // Suavizar la rotación usando esferas de interpolación (slerp)
-        lastQuaternion.slerp(targetQuaternion, smoothingFactor)
+      // Ajustar la rotación de la cámara en el eje Y con alpha (movimiento de izquierda a derecha)
+      camera.rotation.y = alpha * rotationSpeed
 
-        // Actualizar la rotación de la cámara con el quaternion suavizado
-        camera.rotation.setFromQuaternion(targetQuaternion)
+      // Mover la cámara en función de los valores de beta (arriba y abajo) y gamma (izquierda y derecha)
+      // Controlar el movimiento de la cámara a lo largo de los ejes X, Y y Z (traslación)
 
-        // Mostrar los valores de orientación
-        if (logElement.current) {
-          logElement.current.textContent = `
-            Alpha: ${radToDeg(alpha).toFixed(2)}°\n
-            Beta: ${radToDeg(beta).toFixed(2)}°\n
-            Gamma: ${radToDeg(gamma).toFixed(2)}°
-          `
-        }
-      },
-      true
-    )
+      // Movimiento en el eje Z (adelante / atrás), usando beta para la inclinación hacia adelante/atrás
+      camera.position.z += Math.sin(beta) * movementSpeed // Movimiento hacia adelante o atrás
+
+      // Movimiento en el eje X (izquierda / derecha), usando gamma para la inclinación lateral
+      camera.position.x += Math.sin(gamma) * movementSpeed // Movimiento hacia la izquierda o derecha
+
+      // Si quieres limitar el movimiento en el eje Y (arriba / abajo), puedes usar algo como esto:
+      // camera.position.y += Math.sin(beta) * movementSpeed; // Movimiento hacia arriba o abajo
+
+      // Si necesitas suavizar el movimiento, puedes aplicar interpolación (opcional)
+      // Puedes interpolar la posición o la rotación de la cámara para hacerlo más fluido:
+      // camera.position.lerp(new THREE.Vector3(x, y, z), 0.1);
+      // camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, alpha * rotationSpeed, 0.1);
+
+      // Mostrar los valores de orientación
+      if (logElement.current) {
+        logElement.current.textContent = `
+          Alpha: ${radToDeg(alpha).toFixed(2)}°\n
+          Beta: ${radToDeg(beta).toFixed(2)}°\n
+          Gamma: ${radToDeg(gamma).toFixed(2)}°
+        `
+      }
+    })
+    // Asegúrate de que el objeto 'camera' esté definido y que Three.js esté correctamente configurado
   }
 
   // Animación
