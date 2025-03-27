@@ -79,6 +79,15 @@ const GyroScene = () => {
 
         // Actualizar la rotación de la cámara con el quaternion suavizado
         camera.rotation.setFromQuaternion(lastQuaternion)
+
+        // Mostrar los valores de orientación
+        if (logElement.current) {
+          logElement.current.textContent = `
+            Alpha: ${alpha.toFixed(2)}°\n
+            Beta: ${beta.toFixed(2)}°\n
+            Gamma: ${gamma.toFixed(2)}°
+          `
+        }
       },
       true
     )
