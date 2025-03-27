@@ -28,24 +28,35 @@ const GyroScene = () => {
     video.srcObject = stream
     video.play()
 
+    // Crear la textura de la cámara
     videoTexture = new THREE.VideoTexture(video)
     videoTexture.minFilter = THREE.LinearFilter
     videoTexture.magFilter = THREE.LinearFilter
     videoTexture.format = THREE.RGBFormat
 
-    // Crear planos con la textura de la cámara
+    // Crear un plano gigante de fondo para la cámara
+    const backgroundGeometry = new THREE.PlaneGeometry(200, 200)
+    const backgroundMaterial = new THREE.MeshBasicMaterial({
+      map: videoTexture,
+      side: THREE.DoubleSide,
+    })
+    const backgroundPlane = new THREE.Mesh(backgroundGeometry, backgroundMaterial)
+    backgroundPlane.position.set(0, 0, -50) // Colocarlo lejos del centro para que cubra todo el fondo
+    scene.add(backgroundPlane)
+
+    // Crear planos con diferentes colores
     const positions = [
-      { pos: [0, 0, -5], rot: [0, 0, 0] }, // Adelante
-      { pos: [0, 0, 5], rot: [0, Math.PI, 0] }, // Atrás
-      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0] }, // Arriba
-      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0] }, // Abajo
-      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0] }, // Izquierda
-      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0] }, // Derecha
+      { pos: [0, 0, -5], rot: [0, 0, 0], color: 'red' }, // Adelante
+      { pos: [0, 0, 5], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
+      { pos: [0, 5, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
+      { pos: [0, -5, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
+      { pos: [-5, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
+      { pos: [5, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
-    positions.forEach(({ pos, rot }) => {
+    positions.forEach(({ pos, rot, color }) => {
       const geometry = new THREE.PlaneGeometry(3, 3) // Tamaño del plano
-      const material = new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
+      const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       // @ts-expect-error no types
       plane.position.set(...pos)
