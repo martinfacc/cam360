@@ -87,7 +87,6 @@ const GyroScene = () => {
 
         // Actualizar la rotación de la cámara con el quaternion suavizado
         camera.rotation.setFromQuaternion(lastQuaternion)
-        camera.position.setY(gamma)
 
         // Mostrar los valores de orientación
         if (logElement.current) {
