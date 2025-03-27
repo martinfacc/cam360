@@ -73,7 +73,18 @@ const App: React.FC = () => {
     }
   }
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    // Verificar si estamos en un dispositivo Apple
+    // @ts-expect-error faltan las definiciones de tipos
+    if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+      // @ts-expect-error faltan las definiciones de tipos
+      const permission = await DeviceOrientationEvent.requestPermission()
+      if (permission !== 'granted') {
+        alert('Se necesita permiso para acceder al giroscopio. Por favor, acepta la solicitud.')
+        return
+      }
+    }
+
     setStarted(true)
     if (startButtonRef.current) {
       startButtonRef.current.style.display = 'none'
