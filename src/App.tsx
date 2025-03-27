@@ -10,12 +10,6 @@ const GyroScene = () => {
   let scene: THREE.Scene
   let camera: THREE.PerspectiveCamera
   let renderer: THREE.WebGLRenderer
-  let alpha = 0,
-    beta = 0,
-    gamma = 0
-  let prevAlpha = 0,
-    prevBeta = 0,
-    prevGamma = 0
 
   // Inicializar escena
   const init = () => {
@@ -62,45 +56,18 @@ const GyroScene = () => {
 
   // Capturar datos del giroscopio y actualizar la orientación de la cámara
   const startSensors = () => {
-    window.addEventListener('deviceorientation', (event) => {
-      // Tomar solo valores enteros
-      alpha = Math.floor(event.alpha ?? 0)
-      beta = Math.floor(event.beta ?? 0)
-      gamma = Math.floor(event.gamma ?? 0)
-
-      if (logElement.current) {
-        logElement.current.textContent = `alpha: ${alpha}, beta: ${beta}, gamma: ${gamma}`
-      }
-
-      // Suavizar y corregir saltos en alpha, beta y gamma
-      if (Math.abs(alpha - prevAlpha) > 180) {
-        alpha = prevAlpha + (alpha > 0 ? -360 : 360) // Corregir el salto de 360 grados
-      }
-      if (Math.abs(beta - prevBeta) > 90) {
-        beta = prevBeta + (beta > 0 ? -180 : 180) // Corregir el salto de 180 grados
-      }
-      if (Math.abs(gamma - prevGamma) > 90) {
-        gamma = prevGamma + (gamma > 0 ? -180 : 180) // Corregir el salto de 180 grados
-      }
-
-      // Actualizar los valores previos
-      prevAlpha = alpha
-      prevBeta = beta
-      prevGamma = gamma
-
-      // Convertir los valores a radianes
-      const rotation = new THREE.Euler(
-        THREE.MathUtils.degToRad(beta),
-        THREE.MathUtils.degToRad(gamma),
-        THREE.MathUtils.degToRad(alpha),
-        'XYZ'
-      )
-
-      // Aplicar la rotación al cámara
-      camera.rotation.x = rotation.x
-      camera.rotation.y = rotation.y
-      camera.rotation.z = rotation.z
-    })
+    window.addEventListener(
+      'deviceorientation',
+      (event) => {
+        // Obtiene los valores de orientación del dispositivo
+        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0 // Rotación alrededor del eje Z
+        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación alrededor del eje X
+        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación alrededor del eje Y
+        // Actualiza la rotación de la cámara
+        camera.rotation.set(beta, gamma, alpha)
+      },
+      true
+    )
   }
 
   // Animación
