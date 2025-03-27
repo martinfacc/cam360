@@ -36,12 +36,8 @@ const GyroScene = () => {
       const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
-      //A spread argument must either have a tuple type or be passed to a rest parameter.
-      // plane.position.set(...pos)
-      plane.position.x = pos[0]
-      plane.position.y = pos[1]
-      plane.position.z = pos[2]
-
+      // @ts-expect-error test
+      plane.position.set(...pos)
       scene.add(plane)
     })
 
