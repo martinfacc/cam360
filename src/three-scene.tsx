@@ -11,6 +11,11 @@ const SPHERE_OPACITY = 0.5
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
+  const [currentOrientation, setCurrentOrientation] = useState({
+    alpha: 0,
+    beta: 0,
+    gamma: 0,
+  })
 
   // Referencia para almacenar el offset de calibración
   const calibrationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
@@ -111,6 +116,13 @@ export default function ThreeScene() {
       const calibratedBeta = orientationData.current.beta - calibrationRef.current.beta
       // Ignoramos gamma para evitar roll no deseado
 
+      // Actualizamos el estado de la orientación
+      setCurrentOrientation({
+        alpha: calibratedAlpha,
+        beta: calibratedBeta,
+        gamma: orientationData.current.gamma,
+      })
+
       // Convertir a radianes
       const alphaRad = THREE.MathUtils.degToRad(calibratedAlpha)
       const betaRad = THREE.MathUtils.degToRad(calibratedBeta)
@@ -200,8 +212,8 @@ export default function ThreeScene() {
           style={{
             position: 'absolute',
             zIndex: 1,
-            top: '10%',
-            right: '10%',
+            top: '50%',
+            right: '50%',
             padding: '0.5rem',
             fontSize: '1rem',
           }}
@@ -210,6 +222,22 @@ export default function ThreeScene() {
           Calibrar
         </button>
       )}
+      <div
+        style={{
+          position: 'absolute',
+          zIndex: 1,
+          top: '1rem',
+          left: '1rem',
+          color: 'white',
+        }}
+      >
+        <p>Orientación:</p>
+        <p>
+          Alpha: {currentOrientation.alpha.toFixed(2)}°<br />
+          Beta: {currentOrientation.beta.toFixed(2)}°<br />
+          Gamma: {currentOrientation.gamma.toFixed(2)}°
+        </p>
+      </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
     </React.Fragment>
   )
