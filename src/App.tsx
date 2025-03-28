@@ -5,6 +5,25 @@ import * as THREE from 'three'
 const DISTANCE = 25
 const SIZE = 5
 
+function normalizeAngles({ alpha, beta, gamma }: { alpha: number; beta: number; gamma: number }) {
+  let newAlpha = alpha
+  let newBeta = beta
+  let newGamma = gamma
+
+  // Corregir salto de gamma de 90 a -90
+  if (Math.abs(gamma) > 89) {
+    newGamma = Math.sign(gamma) * 89.9 // Limita gamma a evitar el salto
+  }
+
+  // Corregir salto de alpha cuando beta está cerca de 90
+  if (Math.abs(beta) > 89) {
+    newBeta = Math.sign(beta) * 89.9
+    newAlpha = (alpha + 90) % 360 // Ajuste para evitar el salto a 270
+  }
+
+  return { alpha: newAlpha, beta: newBeta, gamma: newGamma }
+}
+
 const GyroScene = () => {
   const mountRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
@@ -67,9 +86,16 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
-        const modAlpha = alpha % (Math.PI * 2)
-        const modBeta = beta % (Math.PI * 2)
-        const modGamma = gamma % (Math.PI * 2)
+        // Normalizar los ángulos
+        const {
+          alpha: modAlpha,
+          beta: modBeta,
+          gamma: modGamma,
+        } = normalizeAngles({
+          alpha,
+          beta,
+          gamma,
+        })
 
         camera.rotation.set(modBeta, modAlpha, -modGamma, 'XYZ')
 
