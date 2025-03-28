@@ -16,6 +16,7 @@ export default function ThreeScene() {
     beta: 0,
     gamma: 0,
   })
+  const [currentScreenOrientation, setCurrentScreenOrientation] = useState(0)
 
   // Referencia para almacenar el offset de calibración
   const calibrationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
@@ -138,6 +139,9 @@ export default function ThreeScene() {
       // Ajustamos según la orientación de la pantalla
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
+
+      setCurrentScreenOrientation(screenOrientationAngle)
+
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
       const screenTransform = new THREE.Quaternion()
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
@@ -212,8 +216,8 @@ export default function ThreeScene() {
           style={{
             position: 'absolute',
             zIndex: 1,
-            top: '50%',
-            right: '50%',
+            top: '1rem',
+            right: '1rem',
             padding: '0.5rem',
             fontSize: '1rem',
           }}
@@ -235,7 +239,8 @@ export default function ThreeScene() {
         <p>
           Alpha: {currentOrientation.alpha.toFixed(2)}°<br />
           Beta: {currentOrientation.beta.toFixed(2)}°<br />
-          Gamma: {currentOrientation.gamma.toFixed(2)}°
+          Gamma: {currentOrientation.gamma.toFixed(2)}° Angulo de pantalla:{' '}
+          {currentScreenOrientation.toFixed(2)}°
         </p>
       </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
