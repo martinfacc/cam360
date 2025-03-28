@@ -6,9 +6,11 @@ const DISTANCE = 25
 const SIZE = 5
 
 function normalizeAngles({ alpha, beta, gamma }: { alpha: number; beta: number; gamma: number }) {
-  const newAlpha = alpha // Normalizar alpha entre 0 y 2π
+  const newAlpha = alpha
   const newBeta = beta
-  const newGamma = gamma - Math.PI // Normalizar gamma entre -π y π
+  let newGamma = gamma
+
+  newGamma = Math.abs(newGamma)
 
   return { alpha: newAlpha, beta: newBeta, gamma: newGamma }
 }
