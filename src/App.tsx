@@ -20,7 +20,7 @@ const ThreeScene = () => {
     const camera = new THREE.PerspectiveCamera(
       75,
       // @ts-expect-error xxx
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
+      mountNode.clientWidth / mountNode.clientHeight,
       0.1,
       1000
     )
@@ -29,29 +29,57 @@ const ThreeScene = () => {
     // Configurar el renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     // @ts-expect-error xxx
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
+    renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     // @ts-expect-error xxx
-    mountRef.current.appendChild(renderer.domElement)
+    mountNode.appendChild(renderer.domElement)
 
-    // Configurar los 6 cuadrados (planos)
-    const configSquares = [
-      { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
-      { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
-      { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
-      { pos: [0, -DISTANCE, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
-      { pos: [-DISTANCE, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
-      { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
+    // Cuadrados base con sus colores y rotaciones
+    const baseSquares = [
+      { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red', type: 'base' }, // Adelante
+      { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue', type: 'base' }, // Atrás
+      { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green', type: 'base' }, // Arriba
+      { pos: [0, -DISTANCE, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow', type: 'base' }, // Abajo
+      { pos: [-DISTANCE, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple', type: 'base' }, // Izquierda
+      { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange', type: 'base' }, // Derecha
     ]
 
-    configSquares.forEach((cfg) => {
+    // Generar cuadrados intermedios entre cada par de cuadrados base
+    const intermediateSquares = []
+    for (let i = 0; i < baseSquares.length; i++) {
+      for (let j = i + 1; j < baseSquares.length; j++) {
+        const posA = baseSquares[i].pos
+        const posB = baseSquares[j].pos
+        const midPos = [(posA[0] + posB[0]) / 2, (posA[1] + posB[1]) / 2, (posA[2] + posB[2]) / 2]
+        const colorA = new THREE.Color(baseSquares[i].color)
+        const colorB = new THREE.Color(baseSquares[j].color)
+        const midColor = colorA.clone().lerp(colorB, 0.5).getStyle() // Degradado al 50%
+        intermediateSquares.push({
+          pos: midPos,
+          rot: [0, 0, 0],
+          color: midColor,
+          type: 'intermediate',
+        })
+      }
+    }
+
+    // Unir todos los cuadrados
+    const allSquares = baseSquares.concat(intermediateSquares)
+
+    // Crear y agregar los cuadrados a la escena
+    allSquares.forEach((cfg) => {
       const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.MeshBasicMaterial({ color: cfg.color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       // @ts-expect-error xxx
       plane.position.set(...cfg.pos)
-      // @ts-expect-error xxx
-      plane.rotation.set(...cfg.rot)
-      // Guardamos la posición inicial para el efecto flotante
+      if (cfg.type === 'base') {
+        // @ts-expect-error xxx
+        plane.rotation.set(...cfg.rot)
+      } else if (cfg.type === 'intermediate') {
+        // Hacer que el cuadrado intermedio mire al centro (la cámara en 0,0,0)
+        plane.lookAt(new THREE.Vector3(0, 0, 0))
+      }
+      // Guardar posición inicial (para efecto flotante u otros si se desea)
       plane.userData.initialPosition = plane.position.clone()
       scene.add(plane)
       squares.push(plane)
@@ -82,7 +110,6 @@ const ThreeScene = () => {
     // Función para manejar los eventos deviceorientation
     // @ts-expect-error xxx
     const handleOrientation = (event) => {
-      // event.alpha, event.beta y event.gamma vienen en grados
       orientationData.alpha = event.alpha || 0
       orientationData.beta = event.beta || 0
       orientationData.gamma = event.gamma || 0
@@ -90,25 +117,19 @@ const ThreeScene = () => {
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
-    // Antes de la función animate, crea el quaternion de corrección
+    // Quaternion de corrección
     const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
 
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Convertir a radianes (usamos solo alpha y beta, ignorando gamma)
       const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
       const beta = THREE.MathUtils.degToRad(orientationData.beta)
-
-      // Creamos un Euler con el orden "YXZ" (gamma lo dejamos en 0 para evitar el roll no deseado)
       const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
-
-      // Aplicamos la corrección fija para alinear el dispositivo con la escena
       quaternion.multiply(q1)
 
-      // Ajustamos la orientación según la orientación de la pantalla usando la Screen Orientation API
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
@@ -116,32 +137,22 @@ const ThreeScene = () => {
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
 
-      // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
-
-      // // Efecto flotante para los cuadrados (opcional)
-      // const time = Date.now() * 0.002
-      // // @ts-expect-error xxx
-      // squares.forEach((plane) => {
-      //   plane.position.y = plane.userData.initialPosition.y + Math.sin(time) * 0.2
-      // })
 
       renderer.render(scene, camera)
     }
 
     animate()
 
-    // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
       // @ts-expect-error xxx
-      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight
+      camera.aspect = mountNode.clientWidth / mountNode.clientHeight
       camera.updateProjectionMatrix()
       // @ts-expect-error xxx
-      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
+      renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     }
     window.addEventListener('resize', onWindowResize)
 
-    // Cleanup al desmontar
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true)
       window.removeEventListener('resize', onWindowResize)
@@ -169,7 +180,6 @@ const ThreeScene = () => {
         })
         .catch(console.error)
     } else {
-      // En otros dispositivos se puede acceder directamente
       setPermissionGranted(true)
     }
   }
