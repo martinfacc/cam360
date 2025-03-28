@@ -10,7 +10,6 @@ const ThreeScene = () => {
     if (!mountNode) return
     if (!permissionGranted) return // Esperamos a obtener el permiso para sensores
 
-    // @ts-expect-error xxx
     const squares = []
     const DISTANCE = 5
     // Objeto para guardar los últimos datos de orientación
@@ -120,12 +119,12 @@ const ThreeScene = () => {
       // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
-      // Efecto flotante para los cuadrados (opcional)
-      const time = Date.now() * 0.002
-      // @ts-expect-error xxx
-      squares.forEach((plane) => {
-        plane.position.y = plane.userData.initialPosition.y + Math.sin(time) * 0.2
-      })
+      // // Efecto flotante para los cuadrados (opcional)
+      // const time = Date.now() * 0.002
+      // // @ts-expect-error xxx
+      // squares.forEach((plane) => {
+      //   plane.position.y = plane.userData.initialPosition.y + Math.sin(time) * 0.2
+      // })
 
       renderer.render(scene, camera)
     }
