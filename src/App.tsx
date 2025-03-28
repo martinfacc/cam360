@@ -1,28 +1,31 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
+// @ts-ignore
+import { DeviceOrientationControls } from './controls.js'
+
+/**
+ * @author richt / http://richt.me
+ * @author WestLangley / http://github.com/WestLangley
+ *
+ * W3C Device Orientation control (http://w3c.github.io/deviceorientation/spec-source-orientation.html)
+ */
 
 const ThreeScene = () => {
   const mountRef = useRef(null)
+  const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
-    let scene, camera, renderer
+    if (!permissionGranted) return // No inicializamos hasta obtener permiso
+
+    let scene, camera, renderer, controls
     // @ts-ignore
     let squares = []
-    const DISTANCE = 5 // Ajusta la distancia si es necesario
-
-    // Variables para controlar la interacción del usuario
-    let isUserInteracting = false,
-      lon = 0,
-      lat = 0,
-      onPointerDownLon = 0,
-      onPointerDownLat = 0,
-      onPointerDownClientX = 0,
-      onPointerDownClientY = 0
+    const DISTANCE = 5 // Ajusta la distancia según tu necesidad
 
     // Crear la escena
     scene = new THREE.Scene()
 
-    // Crear la cámara en (0,0,0)
+    // Crear la cámara en el origen
     camera = new THREE.PerspectiveCamera(
       75,
       // @ts-ignore
@@ -32,14 +35,14 @@ const ThreeScene = () => {
     )
     camera.position.set(0, 0, 0)
 
-    // Configurar el renderer
+    // Configurar el renderer y agregarlo al DOM
     renderer = new THREE.WebGLRenderer({ antialias: true })
     // @ts-ignore
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
     // @ts-ignore
     mountRef.current.appendChild(renderer.domElement)
 
-    // Definir los 6 cuadrados (planos) con posición, rotación y color
+    // Configuración de los 6 cuadrados (planos) con posición, rotación y color
     const configSquares = [
       { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
@@ -51,10 +54,7 @@ const ThreeScene = () => {
 
     configSquares.forEach((cfg) => {
       const geometry = new THREE.PlaneGeometry(2, 2)
-      const material = new THREE.MeshBasicMaterial({
-        color: cfg.color,
-        side: THREE.DoubleSide,
-      })
+      const material = new THREE.MeshBasicMaterial({ color: cfg.color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
       // @ts-ignore
       plane.position.set(...cfg.pos)
@@ -88,45 +88,10 @@ const ThreeScene = () => {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Funciones para controlar la interacción (mouse y tacto)
-    // @ts-ignore
-    const onPointerDown = (event) => {
-      isUserInteracting = true
-      onPointerDownClientX = event.clientX !== undefined ? event.clientX : event.touches[0].clientX
-      onPointerDownClientY = event.clientY !== undefined ? event.clientY : event.touches[0].clientY
-      onPointerDownLon = lon
-      onPointerDownLat = lat
-    }
+    // Inicializar DeviceOrientationControls para usar giroscopio y acelerómetro
+    controls = new DeviceOrientationControls(camera)
 
-    // @ts-ignore
-    const onPointerMove = (event) => {
-      if (isUserInteracting === true) {
-        const clientX = event.clientX !== undefined ? event.clientX : event.touches[0].clientX
-        const clientY = event.clientY !== undefined ? event.clientY : event.touches[0].clientY
-        lon = (onPointerDownClientX - clientX) * 0.1 + onPointerDownLon
-        lat = (clientY - onPointerDownClientY) * 0.1 + onPointerDownLat
-      }
-    }
-
-    const onPointerUp = () => {
-      isUserInteracting = false
-    }
-
-    // Añadir event listeners a la referencia
-    // @ts-ignore
-    mountRef.current.addEventListener('mousedown', onPointerDown, false)
-    // @ts-ignore
-    mountRef.current.addEventListener('mousemove', onPointerMove, false)
-    // @ts-ignore
-    mountRef.current.addEventListener('mouseup', onPointerUp, false)
-    // @ts-ignore
-    mountRef.current.addEventListener('touchstart', onPointerDown, false)
-    // @ts-ignore
-    mountRef.current.addEventListener('touchmove', onPointerMove, false)
-    // @ts-ignore
-    mountRef.current.addEventListener('touchend', onPointerUp, false)
-
-    // Ajustar el tamaño del renderer al redimensionar la ventana
+    // Actualizar el renderer al redimensionar la ventana
     const onWindowResize = () => {
       // @ts-ignore
       camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight
@@ -136,22 +101,14 @@ const ThreeScene = () => {
     }
     window.addEventListener('resize', onWindowResize)
 
-    // Animación: actualizar cámara y efecto flotante en los cuadrados
+    // Loop de animación
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Actualizar la dirección de la cámara según la interacción del usuario
-      lat = Math.max(-85, Math.min(85, lat))
-      const phi = THREE.MathUtils.degToRad(90 - lat)
-      const theta = THREE.MathUtils.degToRad(lon)
+      // Actualizamos los controles que leen los sensores
+      if (controls) controls.update()
 
-      const target = new THREE.Vector3()
-      target.x = Math.sin(phi) * Math.cos(theta)
-      target.y = Math.cos(phi)
-      target.z = Math.sin(phi) * Math.sin(theta)
-      camera.lookAt(target)
-
-      // Animación flotante de los cuadrados (movimiento vertical)
+      // Efecto de flotación para los cuadrados (movimiento vertical)
       const time = Date.now() * 0.002
       // @ts-ignore
       squares.forEach((plane) => {
@@ -168,22 +125,52 @@ const ThreeScene = () => {
       // @ts-ignore
       mountRef.current.removeChild(renderer.domElement)
       window.removeEventListener('resize', onWindowResize)
-      // @ts-ignore
-      mountRef.current.removeEventListener('mousedown', onPointerDown)
-      // @ts-ignore
-      mountRef.current.removeEventListener('mousemove', onPointerMove)
-      // @ts-ignore
-      mountRef.current.removeEventListener('mouseup', onPointerUp)
-      // @ts-ignore
-      mountRef.current.removeEventListener('touchstart', onPointerDown)
-      // @ts-ignore
-      mountRef.current.removeEventListener('touchmove', onPointerMove)
-      // @ts-ignore
-      mountRef.current.removeEventListener('touchend', onPointerUp)
     }
-  }, [])
+  }, [permissionGranted])
 
-  return <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
+  // Función para solicitar permiso para acceder a los sensores del dispositivo (requerido en iOS 13+)
+  const requestPermission = () => {
+    if (
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      // @ts-ignore
+      typeof DeviceOrientationEvent.requestPermission === 'function'
+    ) {
+      // @ts-ignore
+      DeviceOrientationEvent.requestPermission()
+        // @ts-ignore
+        .then((response) => {
+          if (response === 'granted') {
+            setPermissionGranted(true)
+          }
+        })
+        .catch(console.error)
+    } else {
+      // Si no se requiere permiso (otros dispositivos)
+      setPermissionGranted(true)
+    }
+  }
+
+  return (
+    <>
+      {!permissionGranted && (
+        <button
+          style={{
+            position: 'absolute',
+            zIndex: 1,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            padding: '1rem',
+            fontSize: '1.2rem',
+          }}
+          onClick={requestPermission}
+        >
+          Habilitar Sensores
+        </button>
+      )}
+      <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
+    </>
+  )
 }
 
 export default ThreeScene
