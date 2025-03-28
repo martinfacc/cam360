@@ -1,83 +1,23 @@
-import { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
+import { getColorFromPosition, getSphereTransforms } from './utils'
 
-type SphereTransform = {
-  pos: [number, number, number] // Posición [x, y, z]
-  rot: [number, number, number] // Rotación [yaw, pitch, roll]
-}
+const DISTANCE = 5
+const SPHERE_RADIUS = 0.3
+const SPHERE_SEGMENTS = 16
+const SPHERE_COUNT = 16
+const SPHERE_OPACITY = 0.5
 
-/**
- * Genera 'n' puntos en la superficie de una esfera de radio 'r'.
- * Para cada punto se devuelve su posición en 3D y su rotación hacia el centro.
- *
- * @param r - Radio de la esfera
- * @param n - Cantidad de puntos
- * @returns Array de objetos { pos: [x, y, z], rot: [yaw, pitch, roll] }
- */
-function getSphereTransforms(r: number, n: number): SphereTransform[] {
-  const puntos: SphereTransform[] = []
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5)) // Ángulo dorado
-
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (2 * i + 1) / n
-    const radius = Math.sqrt(1 - y * y)
-    const theta = goldenAngle * i
-
-    const x = radius * Math.cos(theta)
-    const z = radius * Math.sin(theta)
-
-    const pos: [number, number, number] = [x * r, y * r, z * r]
-
-    // Direcciones normalizadas hacia el centro
-    const dirX = -x
-    const dirY = -y
-    const dirZ = -z
-
-    // Cálculo de ángulos de rotación
-    const yaw = Math.atan2(dirX, dirZ)
-    const planoXZ = Math.sqrt(dirX * dirX + dirZ * dirZ)
-    const pitch = Math.atan2(dirY, planoXZ)
-    const roll = 0
-
-    const rot: [number, number, number] = [yaw, pitch, roll]
-
-    puntos.push({ pos, rot })
-  }
-
-  return puntos
-}
-
-/**
- * Dada una posición en 3D [x, y, z], genera un color HSL único relacionado con el círculo cromático.
- * Se utiliza la proyección en el plano XZ para calcular el ángulo y mapearlo a un hue entre 0 y 360.
- *
- * @param pos - Tupla [x, y, z] que representa la posición.
- * @returns Un string con el color en formato HSL.
- */
-function getColorFromPosition(pos: [number, number, number]): string {
-  const [x, , z] = pos
-  // Calculamos el ángulo en el plano XZ (rango [-π, π])
-  const angle = Math.atan2(z, x)
-  // Convertimos a grados
-  let hue = (angle * 180) / Math.PI
-  // Normalizamos para que el hue esté entre 0 y 360
-  if (hue < 0) hue += 360
-
-  // Se pueden ajustar la saturación y luminosidad a gusto, aquí se usan valores fijos.
-  return `hsl(${hue}, 70%, 50%)`
-}
-
-const ThreeScene = () => {
-  const mountRef = useRef(null)
+export default function ThreeScene() {
+  const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
     const mountNode = mountRef.current
     if (!mountNode) return
-    if (!permissionGranted) return // Esperamos a obtener el permiso para sensores
+    if (!permissionGranted) return
 
     const elements = []
-    const DISTANCE = 5
     // Objeto para guardar los últimos datos de orientación
     const orientationData = { alpha: 0, beta: 0, gamma: 0 }
 
@@ -85,8 +25,7 @@ const ThreeScene = () => {
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(
       75,
-      // @ts-expect-error xxx
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
+      mountNode.clientWidth / mountNode.clientHeight,
       0.1,
       1000
     )
@@ -94,20 +33,22 @@ const ThreeScene = () => {
 
     // Configurar el renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
-    // @ts-expect-error xxx
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
-    // @ts-expect-error xxx
-    mountRef.current.appendChild(renderer.domElement)
+    renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
+    mountNode.appendChild(renderer.domElement)
 
     // Generar los puntos en la esfera
-    const sphereTransforms = getSphereTransforms(DISTANCE, 24)
+    const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
     // Añadir los puntos a la escena
     sphereTransforms.forEach((cfg) => {
       // Crear una esfera para cada punto
-      const geometry = new THREE.SphereGeometry(0.3, 16, 16)
+      const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
       // Obtener el color basado en la posición
       const color = getColorFromPosition(cfg.pos)
-      const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 })
+      const material = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: SPHERE_OPACITY,
+      })
       const sphere = new THREE.Mesh(geometry, material)
       sphere.position.set(...cfg.pos)
       sphere.rotation.set(...cfg.rot)
@@ -138,8 +79,7 @@ const ThreeScene = () => {
       })
 
     // Función para manejar los eventos deviceorientation
-    // @ts-expect-error xxx
-    const handleOrientation = (event) => {
+    const handleOrientation = (event: DeviceOrientationEvent) => {
       // event.alpha, event.beta y event.gamma vienen en grados
       orientationData.alpha = event.alpha || 0
       orientationData.beta = event.beta || 0
@@ -177,13 +117,6 @@ const ThreeScene = () => {
       // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
-      // // Efecto flotante para los cuadrados (opcional)
-      // const time = Date.now() * 0.002
-      // // @ts-expect-error xxx
-      // elements.forEach((plane) => {
-      //   plane.position.y = plane.userData.initialPosition.y + Math.sin(time) * 0.2
-      // })
-
       renderer.render(scene, camera)
     }
 
@@ -191,20 +124,18 @@ const ThreeScene = () => {
 
     // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
-      // @ts-expect-error xxx
-      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight
+      const mountNode = mountRef.current
+      if (!mountNode) return
+      camera.aspect = mountNode.clientWidth / mountNode.clientHeight
       camera.updateProjectionMatrix()
-      // @ts-expect-error xxx
-      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
+      renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     }
     window.addEventListener('resize', onWindowResize)
 
-    // Cleanup al desmontar
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true)
       window.removeEventListener('resize', onWindowResize)
       if (mountNode && renderer.domElement) {
-        // @ts-expect-error xxx
         mountNode.removeChild(renderer.domElement)
       }
     }
@@ -214,13 +145,12 @@ const ThreeScene = () => {
   const requestPermission = () => {
     if (
       typeof DeviceOrientationEvent !== 'undefined' &&
-      // @ts-expect-error xxx
+      // @ts-expect-error property 'requestPermission' does not exist on type
       typeof DeviceOrientationEvent.requestPermission === 'function'
     ) {
-      // @ts-expect-error xxx
+      // @ts-expect-error property 'requestPermission' does not exist on type
       DeviceOrientationEvent.requestPermission()
-        // @ts-expect-error xxx
-        .then((response) => {
+        .then((response: 'granted' | 'denied') => {
           if (response === 'granted') {
             setPermissionGranted(true)
           }
@@ -233,7 +163,7 @@ const ThreeScene = () => {
   }
 
   return (
-    <>
+    <React.Fragment>
       {!permissionGranted && (
         <button
           style={{
@@ -251,8 +181,6 @@ const ThreeScene = () => {
         </button>
       )}
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
-    </>
+    </React.Fragment>
   )
 }
-
-export default ThreeScene
