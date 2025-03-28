@@ -63,11 +63,9 @@ const GyroScene = () => {
       'deviceorientation',
       (event) => {
         // Convertir los valores de alpha, beta, gamma de grados a radianes
-        const alpha = 0 // Rotación sobre el eje Z (izquierda/derecha)
-        const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
-        const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
-
-        camera.rotation.set(beta, gamma, alpha, 'XYZ') // Rotar la cámara según los valores del giroscopio
+        camera.rotation.x = (event.beta || 0) * (Math.PI / 180)
+        camera.rotation.y = (event.gamma || 0) * (Math.PI / 180)
+        camera.rotation.z = (event.alpha || 0) * (Math.PI / 180)
 
         // const targetQuaternion = new THREE.Quaternion().setFromEuler(
         //   new THREE.Euler(beta, alpha, -gamma, 'XYZ')
