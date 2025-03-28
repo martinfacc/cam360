@@ -63,7 +63,7 @@ const GyroScene = () => {
       'deviceorientation',
       (event) => {
         // Convertir los valores de alpha, beta, gamma de grados a radianes
-        const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0 // Rotación sobre el eje Z (izquierda/derecha)
+        const alpha = 0 // Rotación sobre el eje Z (izquierda/derecha)
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
