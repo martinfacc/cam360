@@ -235,12 +235,13 @@ export default function ThreeScene() {
           color: 'white',
         }}
       >
-        <p>Orientación:</p>
         <p>
+          Orientación:
+          <br />
           Alpha: {currentOrientation.alpha.toFixed(2)}°<br />
           Beta: {currentOrientation.beta.toFixed(2)}°<br />
-          Gamma: {currentOrientation.gamma.toFixed(2)}° Angulo de pantalla:{' '}
-          {currentScreenOrientation.toFixed(2)}°
+          Gamma: {currentOrientation.gamma.toFixed(2)}°<br />
+          Angulo de pantalla: {currentScreenOrientation.toFixed(2)}°
         </p>
       </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
