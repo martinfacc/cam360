@@ -6,20 +6,9 @@ const DISTANCE = 25
 const SIZE = 5
 
 function normalizeAngles({ alpha, beta, gamma }: { alpha: number; beta: number; gamma: number }) {
-  let newAlpha = alpha
-  let newBeta = beta
-  let newGamma = gamma
-
-  // Corregir salto de gamma de 90 a -90
-  if (Math.abs(gamma) > 89) {
-    newGamma = Math.sign(gamma) * 89.9 // Limita gamma a evitar el salto
-  }
-
-  // Corregir salto de alpha cuando beta está cerca de 90
-  if (Math.abs(beta) > 89) {
-    newBeta = Math.sign(beta) * 89.9
-    newAlpha = (alpha + 90) % 360 // Ajuste para evitar el salto a 270
-  }
+  const newAlpha = alpha // Normalizar alpha entre 0 y 2π
+  const newBeta = beta
+  const newGamma = gamma - Math.PI // Normalizar gamma entre -π y π
 
   return { alpha: newAlpha, beta: newBeta, gamma: newGamma }
 }
