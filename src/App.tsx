@@ -6,20 +6,21 @@ const ThreeScene = () => {
   const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
+    const mountNode = mountRef.current
+    if (!mountNode) return
     if (!permissionGranted) return // Esperamos a obtener el permiso para sensores
 
-    let scene, camera, renderer
-    // @ts-ignore
+    // @ts-expect-error xxx
     const squares = []
     const DISTANCE = 5
     // Objeto para guardar los últimos datos de orientación
     const orientationData = { alpha: 0, beta: 0, gamma: 0 }
 
     // Crear la escena y la cámara
-    scene = new THREE.Scene()
-    camera = new THREE.PerspectiveCamera(
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(
       75,
-      // @ts-ignore
+      // @ts-expect-error xxx
       mountRef.current.clientWidth / mountRef.current.clientHeight,
       0.1,
       1000
@@ -27,10 +28,10 @@ const ThreeScene = () => {
     camera.position.set(0, 0, 0)
 
     // Configurar el renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-    // @ts-ignore
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    // @ts-expect-error xxx
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
-    // @ts-ignore
+    // @ts-expect-error xxx
     mountRef.current.appendChild(renderer.domElement)
 
     // Configurar los 6 cuadrados (planos)
@@ -47,9 +48,9 @@ const ThreeScene = () => {
       const geometry = new THREE.PlaneGeometry(2, 2)
       const material = new THREE.MeshBasicMaterial({ color: cfg.color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
-      // @ts-ignore
+      // @ts-expect-error xxx
       plane.position.set(...cfg.pos)
-      // @ts-ignore
+      // @ts-expect-error xxx
       plane.rotation.set(...cfg.rot)
       // Guardamos la posición inicial para el efecto flotante
       plane.userData.initialPosition = plane.position.clone()
@@ -80,7 +81,7 @@ const ThreeScene = () => {
       })
 
     // Función para manejar los eventos deviceorientation
-    // @ts-ignore
+    // @ts-expect-error xxx
     const handleOrientation = (event) => {
       // event.alpha, event.beta y event.gamma vienen en grados
       orientationData.alpha = event.alpha || 0
@@ -105,9 +106,10 @@ const ThreeScene = () => {
       quaternion.setFromEuler(euler)
 
       // Ajustar por la orientación de la pantalla
-      const screenOrientation = window.orientation
-        ? THREE.MathUtils.degToRad(window.orientation)
-        : 0
+      const screenOrientationAngle =
+        screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
+      const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
+
       const screenTransform = new THREE.Quaternion()
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
@@ -116,7 +118,7 @@ const ThreeScene = () => {
 
       // Efecto flotante para los cuadrados
       const time = Date.now() * 0.002
-      // @ts-ignore
+      // @ts-expect-error xxx
       squares.forEach((plane) => {
         plane.position.y = plane.userData.initialPosition.y + Math.sin(time) * 0.2
       })
@@ -128,10 +130,10 @@ const ThreeScene = () => {
 
     // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
-      // @ts-ignore
+      // @ts-expect-error xxx
       camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight
       camera.updateProjectionMatrix()
-      // @ts-ignore
+      // @ts-expect-error xxx
       renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight)
     }
     window.addEventListener('resize', onWindowResize)
@@ -140,8 +142,10 @@ const ThreeScene = () => {
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true)
       window.removeEventListener('resize', onWindowResize)
-      // @ts-ignore
-      mountRef.current.removeChild(renderer.domElement)
+      if (mountNode && renderer.domElement) {
+        // @ts-expect-error xxx
+        mountNode.removeChild(renderer.domElement)
+      }
     }
   }, [permissionGranted])
 
@@ -149,12 +153,12 @@ const ThreeScene = () => {
   const requestPermission = () => {
     if (
       typeof DeviceOrientationEvent !== 'undefined' &&
-      // @ts-ignore
+      // @ts-expect-error xxx
       typeof DeviceOrientationEvent.requestPermission === 'function'
     ) {
-      // @ts-ignore
+      // @ts-expect-error xxx
       DeviceOrientationEvent.requestPermission()
-        // @ts-ignore
+        // @ts-expect-error xxx
         .then((response) => {
           if (response === 'granted') {
             setPermissionGranted(true)
