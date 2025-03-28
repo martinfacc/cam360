@@ -17,6 +17,16 @@ export default function ThreeScene() {
     gamma: 0,
   })
   const [currentScreenOrientation, setCurrentScreenOrientation] = useState(0)
+  const [currentCameraPosition, setCurrentCameraPosition] = useState({
+    x: 0,
+    y: 0,
+    z: 0,
+  })
+  const [currentCameraRotation, setCurrentCameraRotation] = useState({
+    x: 0,
+    y: 0,
+    z: 0,
+  })
 
   // Referencia para almacenar el offset de calibración
   const calibrationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
@@ -150,6 +160,25 @@ export default function ThreeScene() {
       // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
+      // Actualizamos la posición de la cámara
+      const cameraPosition = new THREE.Vector3(
+        currentCameraPosition.x,
+        currentCameraPosition.y,
+        currentCameraPosition.z
+      )
+      cameraPosition.applyQuaternion(quaternion)
+      camera.position.copy(cameraPosition)
+      setCurrentCameraPosition({
+        x: cameraPosition.x,
+        y: cameraPosition.y,
+        z: cameraPosition.z,
+      })
+      setCurrentCameraRotation({
+        x: quaternion.x,
+        y: quaternion.y,
+        z: quaternion.z,
+      })
+
       renderer.render(scene, camera)
     }
     animate()
@@ -171,6 +200,7 @@ export default function ThreeScene() {
         mountNode.removeChild(renderer.domElement)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted])
 
   // Solicitar permiso para acceder a los sensores (requerido en iOS 13+)
@@ -242,6 +272,24 @@ export default function ThreeScene() {
           Beta: {currentOrientation.beta.toFixed(2)}°<br />
           Gamma: {currentOrientation.gamma.toFixed(2)}°<br />
           Angulo de pantalla: {currentScreenOrientation.toFixed(2)}°
+        </p>
+        <p>
+          Posición de la cámara:
+          <br />
+          X: {currentCameraPosition.x.toFixed(2)}
+          <br />
+          Y: {currentCameraPosition.y.toFixed(2)}
+          <br />
+          Z: {currentCameraPosition.z.toFixed(2)}
+          <br />
+          Rotación de la cámara:
+          <br />
+          X: {currentCameraRotation.x.toFixed(2)}
+          <br />
+          Y: {currentCameraRotation.y.toFixed(2)}
+          <br />
+          Z: {currentCameraRotation.z.toFixed(2)}
+          <br />
         </p>
       </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
