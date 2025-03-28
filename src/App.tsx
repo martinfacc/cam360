@@ -5,16 +5,6 @@ import * as THREE from 'three'
 const DISTANCE = 25
 const SIZE = 5
 
-function normalizeAngles({ alpha, beta, gamma }: { alpha: number; beta: number; gamma: number }) {
-  const newAlpha = alpha
-  const newBeta = beta
-  let newGamma = gamma
-
-  newGamma = Math.abs(newGamma)
-
-  return { alpha: newAlpha, beta: newBeta, gamma: newGamma }
-}
-
 const GyroScene = () => {
   const mountRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
@@ -77,18 +67,7 @@ const GyroScene = () => {
         const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0 // Rotación sobre el eje X (arriba/abajo)
         const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0 // Rotación sobre el eje Y (lateral)
 
-        // Normalizar los ángulos
-        const {
-          alpha: modAlpha,
-          beta: modBeta,
-          gamma: modGamma,
-        } = normalizeAngles({
-          alpha,
-          beta,
-          gamma,
-        })
-
-        camera.rotation.set(modBeta, modAlpha, -modGamma, 'XYZ')
+        camera.rotation.set(beta, gamma, alpha, 'XYZ') // Rotar la cámara según los valores del giroscopio
 
         // const targetQuaternion = new THREE.Quaternion().setFromEuler(
         //   new THREE.Euler(beta, alpha, -gamma, 'XYZ')
