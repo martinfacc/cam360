@@ -1,33 +1,33 @@
-'use client'
-import { useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-const DISTANCE = 25
-const SIZE = 5
+const ARApp = () => {
+  const canvasRef = useRef(null)
+  const videoRef = useRef(null)
+  const sceneRef = useRef(new THREE.Scene())
+  const cameraRef = useRef(
+    new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
+  )
+  const rendererRef = useRef(null)
 
-const GyroScene = () => {
-  const mountRef = useRef<HTMLDivElement>(null)
-  const startButtonRef = useRef<HTMLButtonElement>(null)
-  const logElement = useRef<HTMLDivElement>(null)
-  const [started, setStarted] = useState(false)
-  let scene: THREE.Scene
-  let camera: THREE.PerspectiveCamera
-  let renderer: THREE.WebGLRenderer
+  // Iniciar la cámara del dispositivo con WebRTC
+  const initCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+      // @ts-expect-error xxx
+      videoRef.current.srcObject = stream
+    } catch (err) {
+      console.error('Error al acceder a la cámara:', err)
+    }
+  }
 
-  // Inicializar escena
-  const init = () => {
-    scene = new THREE.Scene()
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    mountRef.current?.appendChild(renderer.domElement)
-
-    // Crear planos de diferentes colores en las seis direcciones
-    const positions: Array<{
-      pos: [number, number, number]
-      rot: [number, number, number]
-      color: string
-    }> = [
+  // Crear los 6 cuadrados flotantes
+  // @ts-expect-error xxx
+  const createCubes = (scene) => {
+    const DISTANCE = 2
+    const cubes = [
       { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
       { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
       { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
@@ -36,109 +36,95 @@ const GyroScene = () => {
       { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
     ]
 
-    positions.forEach(({ pos, rot, color }) => {
-      const geometry = new THREE.PlaneGeometry(SIZE, SIZE)
+    cubes.forEach(({ pos, rot, color }) => {
+      const geometry = new THREE.PlaneGeometry(1, 1)
       const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
       const plane = new THREE.Mesh(geometry, material)
+      // @ts-expect-error xxx
       plane.position.set(...pos)
+      // @ts-expect-error xxx
       plane.rotation.set(...rot)
       scene.add(plane)
     })
-
-    camera.position.set(0, 0, 0) // Cámara en el centro
-
-    window.addEventListener('resize', onWindowResize)
   }
 
-  // Ajustar tamaño en cambio de ventana
-  const onWindowResize = () => {
-    camera.aspect = window.innerWidth / window.innerHeight
-    camera.updateProjectionMatrix()
-    renderer.setSize(window.innerWidth, window.innerHeight)
+  // Sincronizar la rotación de la cámara con los sensores
+  const syncSensorOrientation = () => {
+    let beta = 0,
+      gamma = 0
+
+    // Escuchar eventos de la orientación del dispositivo
+    window.addEventListener('deviceorientation', (event) => {
+      beta = event.beta || 0 // Inclinación adelante/atrás
+      gamma = event.gamma || 0 // Inclinación izquierda/derecha
+    })
+
+    return { beta, gamma }
   }
 
-  const startSensors = () => {
-    // Este código asume que tienes un listener de eventos para detectar el movimiento del giroscopio
-    window.addEventListener(
-      'deviceorientation',
-      (event) => {
-        // Convertir los valores de alpha, beta, gamma de grados a radianes
-        camera.rotation.x = (event.beta || 0) * (Math.PI / 180)
-        camera.rotation.y = (event.gamma || 0) * (Math.PI / 180)
-        camera.rotation.z = (event.alpha || 0) * (Math.PI / 180)
+  // Iniciar la escena y animación
+  const startAR = () => {
+    const canvas = canvasRef.current
+    const video = videoRef.current
 
-        // const targetQuaternion = new THREE.Quaternion().setFromEuler(
-        //   new THREE.Euler(beta, alpha, -gamma, 'XYZ')
-        // )
+    // Configurar Three.js
+    // @ts-expect-error xxx
+    rendererRef.current = new THREE.WebGLRenderer({ alpha: true, canvas })
+    // @ts-expect-error xxx
+    rendererRef.current.setSize(window.innerWidth, window.innerHeight)
 
-        // // Aplicar la rotación a la cámara
-        // camera.quaternion.slerp(targetQuaternion, 0.1) // Suavizar la rotación
+    const camera = cameraRef.current
+    camera.position.z = 5
 
-        // // Actualizar la rotación de la cámara con el quaternion suavizado
-        // camera.rotation.setFromQuaternion(targetQuaternion)
+    // Crear la escena de AR y los cuadrados flotantes
+    createCubes(sceneRef.current)
 
-        // Mostrar los valores de orientación
-        if (logElement.current) {
-          logElement.current.textContent = `
-            Alpha: ${(event.alpha || 0).toFixed(2)}°\n
-            Beta: ${(event.beta || 0).toFixed(2)}°\n
-            Gamma: ${(event.gamma || 0).toFixed(2)}°
-          `
-        }
+    // Configurar la cámara de video como fondo
 
-        // Si deseas una rotación más fluida, puedes suavizar la rotación con interpolación:
-        // camera.rotation.y = THREE.MathUtils.lerp(camera.rotation.y, alpha * rotationSpeed, 0.1);
-      },
-      true
-    )
-  }
+    // @ts-expect-error xxx
+    video.style.position = 'fixed'
+    // @ts-expect-error xxx
+    video.style.top = '0'
+    // @ts-expect-error xxx
+    video.style.left = '0'
+    // @ts-expect-error xxx
+    video.style.width = '100%'
+    // @ts-expect-error xxx
+    video.style.height = '100%'
+    // @ts-expect-error xxx
+    video.style.objectFit = 'cover'
 
-  // Animación
-  const animate = () => {
-    requestAnimationFrame(animate)
-    renderer.render(scene, camera)
-  }
+    // Sincronizar el movimiento de la cámara con los sensores
+    const { beta, gamma } = syncSensorOrientation()
 
-  // Manejar inicio con permisos
-  const handleStart = async () => {
-    // @ts-expect-error no types
-    if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
-      // @ts-expect-error no types
-      const permission = await DeviceOrientationEvent.requestPermission()
-      if (permission !== 'granted') {
-        alert('Se necesita permiso para acceder al giroscopio. Por favor, acepta la solicitud.')
-        return
-      }
+    // Animación de la escena
+    const animate = () => {
+      requestAnimationFrame(animate)
+
+      // Actualizar la cámara según los sensores
+      camera.rotation.x = beta * (Math.PI / 180)
+      camera.rotation.y = gamma * (Math.PI / 180)
+
+      // @ts-expect-error xxx
+      rendererRef.current.render(sceneRef.current, camera)
     }
 
-    setStarted(true)
-    startButtonRef.current!.style.display = 'none'
-    if (logElement.current) logElement.current.textContent = 'Capturando datos...'
-
-    init()
-    startSensors()
     animate()
   }
 
+  useEffect(() => {
+    initCamera()
+    startAR()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
-    <div ref={mountRef} className="relative w-full h-screen">
-      {!started && (
-        <button
-          ref={startButtonRef}
-          onClick={handleStart}
-          className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-2 rounded shadow-lg"
-        >
-          Comenzar
-        </button>
-      )}
-      <div
-        ref={logElement}
-        className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white p-2 text-sm rounded"
-      >
-        Esperando inicio...
-      </div>
+    <div>
+      {/* @ts-expect-error xxx */}
+      <video ref={videoRef} autoplay playsinline />
+      <canvas ref={canvasRef} />
     </div>
   )
 }
 
-export default GyroScene
+export default ARApp
