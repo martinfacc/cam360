@@ -8,6 +8,47 @@ const SPHERE_SEGMENTS = 16
 const SPHERE_COUNT = 16
 const SPHERE_OPACITY = 0.5
 
+// Filtro Kalman simple para suavizar datos
+class KalmanFilter {
+  private R: number
+  private Q: number
+  private A: number
+  private B: number
+  private C: number
+  private cov: number
+  private x: number
+
+  constructor(R: number, Q: number, A = 1, B = 0, C = 1) {
+    this.R = R // Varianza del ruido en la medición
+    this.Q = Q // Varianza del ruido del proceso
+    this.A = A
+    this.B = B
+    this.C = C
+    this.cov = NaN
+    this.x = NaN
+  }
+
+  filter(z: number, u: number = 0): number {
+    // Inicialización con la primera medición
+    if (isNaN(this.x)) {
+      this.x = z / this.C
+      this.cov = (1 / this.C) * this.R * (1 / this.C)
+    } else {
+      // Predicción
+      const predX = this.A * this.x + this.B * u
+      const predCov = this.A * this.cov * this.A + this.Q
+
+      // Ganancia de Kalman
+      const K = (predCov * this.C) / (this.C * predCov * this.C + this.R)
+      // Actualizar estimación con la medición
+      this.x = predX + K * (z - this.C * predX)
+      // Actualizar la covarianza
+      this.cov = predCov - K * this.C * predCov
+    }
+    return this.x
+  }
+}
+
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
@@ -17,9 +58,15 @@ export default function ThreeScene() {
     if (!mountNode) return
     if (!permissionGranted) return
 
-    const elements = []
-    // Objeto para guardar los últimos datos de orientación
+    const elements: THREE.Mesh[] = []
+    // Objeto para guardar los últimos datos de orientación filtrados
     const orientationData = { alpha: 0, beta: 0, gamma: 0 }
+
+    // Crear instancias del filtro Kalman para cada eje
+    // Los parámetros (R y Q) se pueden ajustar según el ruido esperado
+    const kalmanAlpha = new KalmanFilter(0.1, 0.1)
+    const kalmanBeta = new KalmanFilter(0.1, 0.1)
+    const kalmanGamma = new KalmanFilter(0.1, 0.1)
 
     // Crear la escena y la cámara
     const scene = new THREE.Scene()
@@ -38,11 +85,8 @@ export default function ThreeScene() {
 
     // Generar los puntos en la esfera
     const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
-    // Añadir los puntos a la escena
     sphereTransforms.forEach((cfg) => {
-      // Crear una esfera para cada punto
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
-      // Obtener el color basado en la posición
       const color = getColorFromPosition(cfg.pos)
       const material = new THREE.MeshBasicMaterial({
         color,
@@ -78,35 +122,42 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Función para manejar los eventos deviceorientation
+    // Función para manejar los eventos deviceorientation usando los filtros Kalman
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      // Ajustar los valores para estar dentro del rango especificado
-      orientationData.alpha = event.alpha !== null ? (event.alpha + 360) % 360 : 0
-      orientationData.beta = event.beta !== null ? Math.max(-180, Math.min(180, event.beta)) : 0
-      orientationData.gamma = event.gamma !== null ? Math.max(-90, Math.min(90, event.gamma)) : 0
+      if (event.alpha === null || event.beta === null || event.gamma === null) return
+
+      // Convertir alpha a [0, 360) y filtrar cada eje
+      const rawAlpha = (event.alpha + 360) % 360
+      const rawBeta = Math.max(-180, Math.min(180, event.beta))
+      const rawGamma = Math.max(-90, Math.min(90, event.gamma))
+
+      // Aplicar el filtro Kalman a cada medición
+      orientationData.alpha = kalmanAlpha.filter(rawAlpha)
+      orientationData.beta = kalmanBeta.filter(rawBeta)
+      orientationData.gamma = kalmanGamma.filter(rawGamma)
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
-    // Antes de la función animate, crea el quaternion de corrección
+    // Corrección para alinear el dispositivo con la escena
     const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
 
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Convertir a radianes (usamos solo alpha y beta, ignorando gamma)
+      // Convertir a radianes (usamos alpha y beta; se ignora gamma para evitar roll no deseado)
       const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
       const beta = THREE.MathUtils.degToRad(orientationData.beta)
 
-      // Creamos un Euler con el orden "YXZ" (gamma lo dejamos en 0 para evitar el roll no deseado)
+      // Crear un Euler con el orden "YXZ"
       const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
 
-      // Aplicamos la corrección fija para alinear el dispositivo con la escena
+      // Aplicar la corrección fija para alinear el dispositivo con la escena
       quaternion.multiply(q1)
 
-      // Ajustamos la orientación según la orientación de la pantalla usando la Screen Orientation API
+      // Ajustar la orientación según la pantalla
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
@@ -114,7 +165,7 @@ export default function ThreeScene() {
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
 
-      // Asignamos el quaternion resultante a la cámara
+      // Asignar el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
       renderer.render(scene, camera)
