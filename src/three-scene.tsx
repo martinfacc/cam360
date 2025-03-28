@@ -40,7 +40,7 @@ class KalmanFilter {
 
       // Ganancia de Kalman
       const K = (predCov * this.C) / (this.C * predCov * this.C + this.R)
-      // Actualizar estimación con la medición
+      // Actualización con la medición
       this.x = predX + K * (z - this.C * predX)
       // Actualizar la covarianza
       this.cov = predCov - K * this.C * predCov
@@ -52,6 +52,11 @@ class KalmanFilter {
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
+  // Estado para almacenar el offset de calibración
+  const [calibrationOffset, setCalibrationOffset] = useState({ alpha: 0, beta: 0, gamma: 0 })
+
+  // Usamos un ref para mantener la orientación filtrada actualizada
+  const orientationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
 
   useEffect(() => {
     const mountNode = mountRef.current
@@ -59,11 +64,8 @@ export default function ThreeScene() {
     if (!permissionGranted) return
 
     const elements: THREE.Mesh[] = []
-    // Objeto para guardar los últimos datos de orientación filtrados
-    const orientationData = { alpha: 0, beta: 0, gamma: 0 }
 
     // Crear instancias del filtro Kalman para cada eje
-    // Los parámetros (R y Q) se pueden ajustar según el ruido esperado
     const kalmanAlpha = new KalmanFilter(0.1, 0.1)
     const kalmanBeta = new KalmanFilter(0.1, 0.1)
     const kalmanGamma = new KalmanFilter(0.1, 0.1)
@@ -83,7 +85,7 @@ export default function ThreeScene() {
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
 
-    // Generar los puntos en la esfera
+    // Generar y añadir los puntos en la esfera
     const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
     sphereTransforms.forEach((cfg) => {
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
@@ -122,19 +124,19 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Función para manejar los eventos deviceorientation usando los filtros Kalman
+    // Función para manejar los eventos deviceorientation aplicando el filtro Kalman
     const handleOrientation = (event: DeviceOrientationEvent) => {
       if (event.alpha === null || event.beta === null || event.gamma === null) return
 
-      // Convertir alpha a [0, 360) y filtrar cada eje
+      // Convertir alpha a [0, 360) y ajustar beta y gamma
       const rawAlpha = (event.alpha + 360) % 360
       const rawBeta = Math.max(-180, Math.min(180, event.beta))
       const rawGamma = Math.max(-90, Math.min(90, event.gamma))
 
       // Aplicar el filtro Kalman a cada medición
-      orientationData.alpha = kalmanAlpha.filter(rawAlpha)
-      orientationData.beta = kalmanBeta.filter(rawBeta)
-      orientationData.gamma = kalmanGamma.filter(rawGamma)
+      orientationRef.current.alpha = kalmanAlpha.filter(rawAlpha)
+      orientationRef.current.beta = kalmanBeta.filter(rawBeta)
+      orientationRef.current.gamma = kalmanGamma.filter(rawGamma)
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
@@ -145,12 +147,17 @@ export default function ThreeScene() {
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Convertir a radianes (usamos alpha y beta; se ignora gamma para evitar roll no deseado)
-      const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
-      const beta = THREE.MathUtils.degToRad(orientationData.beta)
+      // Obtener los valores filtrados y aplicar el offset de calibración
+      const effectiveAlpha = orientationRef.current.alpha - calibrationOffset.alpha
+      const effectiveBeta = orientationRef.current.beta - calibrationOffset.beta
+      // Para evitar problemas con roll, usamos gamma solo si se requiere
+
+      // Convertir a radianes
+      const radAlpha = THREE.MathUtils.degToRad(effectiveAlpha)
+      const radBeta = THREE.MathUtils.degToRad(effectiveBeta)
 
       // Crear un Euler con el orden "YXZ"
-      const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
+      const euler = new THREE.Euler(radBeta, radAlpha, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
 
@@ -173,7 +180,7 @@ export default function ThreeScene() {
 
     animate()
 
-    // Actualizar tamaño al redimensionar
+    // Ajuste del renderer al redimensionar la ventana
     const onWindowResize = () => {
       const mountNode = mountRef.current
       if (!mountNode) return
@@ -190,7 +197,7 @@ export default function ThreeScene() {
         mountNode.removeChild(renderer.domElement)
       }
     }
-  }, [permissionGranted])
+  }, [permissionGranted, calibrationOffset])
 
   // Solicitar permiso para acceder a los sensores (requerido en iOS 13+)
   const requestPermission = () => {
@@ -208,9 +215,14 @@ export default function ThreeScene() {
         })
         .catch(console.error)
     } else {
-      // En otros dispositivos se puede acceder directamente
       setPermissionGranted(true)
     }
+  }
+
+  // Función para calibrar: se toma la orientación filtrada actual y se guarda como offset
+  const calibrate = () => {
+    // Se toma la referencia actual y se guarda en el estado
+    setCalibrationOffset({ ...orientationRef.current })
   }
 
   return (
@@ -219,7 +231,7 @@ export default function ThreeScene() {
         <button
           style={{
             position: 'absolute',
-            zIndex: 1,
+            zIndex: 2,
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
@@ -229,6 +241,22 @@ export default function ThreeScene() {
           onClick={requestPermission}
         >
           Habilitar Sensores
+        </button>
+      )}
+      {permissionGranted && (
+        <button
+          style={{
+            position: 'absolute',
+            zIndex: 2,
+            top: '10%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '0.8rem',
+            fontSize: '1rem',
+          }}
+          onClick={calibrate}
+        >
+          Calibrar
         </button>
       )}
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
