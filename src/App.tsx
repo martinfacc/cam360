@@ -91,32 +91,36 @@ const ThreeScene = () => {
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
-    // Animación: actualiza la cámara y los cuadrados
+    // Antes de la función animate, crea el quaternion de corrección
+    const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
+
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Convertir a radianes
+      // Convertir a radianes (usamos solo alpha y beta, ignorando gamma)
       const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
       const beta = THREE.MathUtils.degToRad(orientationData.beta)
-      const gamma = THREE.MathUtils.degToRad(orientationData.gamma)
 
-      // Creamos un Euler. El orden "YXZ" es común para estos casos
-      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ')
+      // Creamos un Euler con el orden "YXZ" (gamma lo dejamos en 0 para evitar el roll no deseado)
+      const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
 
-      // Ajustar por la orientación de la pantalla
+      // Aplicamos la corrección fija para alinear el dispositivo con la escena
+      quaternion.multiply(q1)
+
+      // Ajustamos la orientación según la orientación de la pantalla usando la Screen Orientation API
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
-
       const screenTransform = new THREE.Quaternion()
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
 
+      // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
-      // Efecto flotante para los cuadrados
+      // Efecto flotante para los cuadrados (opcional)
       const time = Date.now() * 0.002
       // @ts-expect-error xxx
       squares.forEach((plane) => {
