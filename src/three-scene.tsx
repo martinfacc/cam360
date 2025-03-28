@@ -109,15 +109,14 @@ export default function ThreeScene() {
       const calibratedAlpha =
         (orientationData.current.alpha - calibrationRef.current.alpha + 360) % 360
       const calibratedBeta = orientationData.current.beta - calibrationRef.current.beta
-      const calibratedGamma = orientationData.current.gamma - calibrationRef.current.gamma
+      // Ignoramos gamma para evitar roll no deseado
 
       // Convertir a radianes
       const alphaRad = THREE.MathUtils.degToRad(calibratedAlpha)
       const betaRad = THREE.MathUtils.degToRad(calibratedBeta)
-      const gammaRad = THREE.MathUtils.degToRad(calibratedGamma)
 
       // Creamos un Euler con el orden "YXZ"
-      const euler = new THREE.Euler(betaRad, alphaRad, gammaRad, 'YXZ')
+      const euler = new THREE.Euler(betaRad, alphaRad, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
 
