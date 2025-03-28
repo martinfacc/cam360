@@ -80,10 +80,10 @@ export default function ThreeScene() {
 
     // Función para manejar los eventos deviceorientation
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      // event.alpha, event.beta y event.gamma vienen en grados
-      orientationData.alpha = event.alpha || 0
-      orientationData.beta = event.beta || 0
-      orientationData.gamma = event.gamma || 0
+      // Ajustar los valores para estar dentro del rango especificado
+      orientationData.alpha = event.alpha !== null ? (event.alpha + 360) % 360 : 0
+      orientationData.beta = event.beta !== null ? Math.max(-180, Math.min(180, event.beta)) : 0
+      orientationData.gamma = event.gamma !== null ? Math.max(-90, Math.min(90, event.gamma)) : 0
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
