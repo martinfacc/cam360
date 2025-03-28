@@ -17,16 +17,9 @@ export default function ThreeScene() {
     if (!mountNode) return
     if (!permissionGranted) return
 
-    const elements: THREE.Object3D[] = []
-
-    // Variables para el acumulado y la última lectura de cada ángulo
-    const lastAngles: { alpha: number | null; beta: number | null; gamma: number | null } = {
-      alpha: null,
-      beta: null,
-      gamma: null,
-    }
-    const accumulatedAngles = { alpha: 0, beta: 0, gamma: 0 }
-    const smoothingFactor = 0.1
+    const elements = []
+    // Objeto para guardar los últimos datos de orientación
+    const orientationData = { alpha: 0, beta: 0, gamma: 0 }
 
     // Crear la escena y la cámara
     const scene = new THREE.Scene()
@@ -45,8 +38,11 @@ export default function ThreeScene() {
 
     // Generar los puntos en la esfera
     const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
+    // Añadir los puntos a la escena
     sphereTransforms.forEach((cfg) => {
+      // Crear una esfera para cada punto
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
+      // Obtener el color basado en la posición
       const color = getColorFromPosition(cfg.pos)
       const material = new THREE.MeshBasicMaterial({
         color,
@@ -60,7 +56,7 @@ export default function ThreeScene() {
       elements.push(sphere)
     })
 
-    // Configurar el feed de la cámara trasera como fondo
+    // Configurar el feed de la cámara trasera y usarlo como fondo
     const video = document.createElement('video')
     video.autoplay = true
     video.playsInline = true
@@ -82,68 +78,43 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Función para actualizar el ángulo de forma acumulada y con suavizado
-    const updateAxis = (axis: 'alpha' | 'beta' | 'gamma', newValue: number) => {
-      if (lastAngles[axis] === null) {
-        // Primera lectura: inicializamos
-        lastAngles[axis] = newValue
-        accumulatedAngles[axis] = newValue
-        return
-      }
-      let delta = newValue - lastAngles[axis]!
-      // Manejo de discontinuidad (por ejemplo, de 359 a 0)
-      if (delta > 180) delta -= 360
-      else if (delta < -180) delta += 360
-
-      // Actualización: se suma el delta y se suaviza la transición
-      const newAccumulated = accumulatedAngles[axis] + delta
-      accumulatedAngles[axis] =
-        accumulatedAngles[axis] * (1 - smoothingFactor) + newAccumulated * smoothingFactor
-
-      lastAngles[axis] = newValue
-    }
-
     // Función para manejar los eventos deviceorientation
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (event.alpha === null || event.beta === null || event.gamma === null) return
-
-      // Actualizamos cada eje con el nuevo valor del sensor
-      updateAxis('alpha', (event.alpha + 360) % 360) // alpha siempre entre 0 y 360
-      updateAxis('beta', Math.max(-180, Math.min(180, event.beta)))
-      updateAxis('gamma', Math.max(-90, Math.min(90, event.gamma)))
+      // Ajustar los valores para estar dentro del rango especificado
+      orientationData.alpha = event.alpha !== null ? (event.alpha + 360) % 360 : 0
+      orientationData.beta = event.beta !== null ? Math.max(-180, Math.min(180, event.beta)) : 0
+      orientationData.gamma = event.gamma !== null ? Math.max(-90, Math.min(90, event.gamma)) : 0
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
-    // Corrección fija para alinear el dispositivo con la escena
+    // Antes de la función animate, crea el quaternion de corrección
     const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
 
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Convertir los ángulos acumulados a radianes
-      const alphaRad = THREE.MathUtils.degToRad(accumulatedAngles.alpha)
-      const betaRad = THREE.MathUtils.degToRad(accumulatedAngles.beta)
-      const gammaRad = THREE.MathUtils.degToRad(accumulatedAngles.gamma)
+      // Convertir a radianes (usamos solo alpha y beta, ignorando gamma)
+      const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
+      const beta = THREE.MathUtils.degToRad(orientationData.beta)
 
-      // Crear un Euler que incluya los tres ángulos, en el orden "YXZ"
-      const euler = new THREE.Euler(betaRad, alphaRad, gammaRad, 'YXZ')
-      const quaternion = new THREE.Quaternion().setFromEuler(euler)
+      // Creamos un Euler con el orden "YXZ" (gamma lo dejamos en 0 para evitar el roll no deseado)
+      const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
+      const quaternion = new THREE.Quaternion()
+      quaternion.setFromEuler(euler)
 
-      // Aplicar la corrección fija
+      // Aplicamos la corrección fija para alinear el dispositivo con la escena
       quaternion.multiply(q1)
 
-      // Ajustar según la orientación de la pantalla
+      // Ajustamos la orientación según la orientación de la pantalla usando la Screen Orientation API
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
-      const screenTransform = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 0, 1),
-        -screenOrientation
-      )
+      const screenTransform = new THREE.Quaternion()
+      screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
 
-      // Asignar el quaternion resultante a la cámara
+      // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
 
       renderer.render(scene, camera)
@@ -151,6 +122,7 @@ export default function ThreeScene() {
 
     animate()
 
+    // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
       const mountNode = mountRef.current
       if (!mountNode) return
@@ -173,10 +145,10 @@ export default function ThreeScene() {
   const requestPermission = () => {
     if (
       typeof DeviceOrientationEvent !== 'undefined' &&
-      // @ts-expect-error UNX
+      // @ts-expect-error property 'requestPermission' does not exist on type
       typeof DeviceOrientationEvent.requestPermission === 'function'
     ) {
-      // @ts-expect-error UNX
+      // @ts-expect-error property 'requestPermission' does not exist on type
       DeviceOrientationEvent.requestPermission()
         .then((response: 'granted' | 'denied') => {
           if (response === 'granted') {
