@@ -97,15 +97,14 @@ const ThreeScene = () => {
       // Convertir a radianes
       const alpha = THREE.MathUtils.degToRad(orientationData.alpha)
       const beta = THREE.MathUtils.degToRad(orientationData.beta)
-      // Ignoramos gamma para evitar el efecto de giro inesperado
-      // const gamma = THREE.MathUtils.degToRad(orientationData.gamma);
+      const gamma = THREE.MathUtils.degToRad(orientationData.gamma)
 
-      // Creamos el Euler sin componente de giro (roll)
-      const euler = new THREE.Euler(beta, alpha, 0, 'YXZ')
+      // Creamos un Euler. El orden "YXZ" es común para estos casos
+      const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
 
-      // Ajuste por la orientación de la pantalla
+      // Ajustar por la orientación de la pantalla
       const screenOrientation = window.orientation
         ? THREE.MathUtils.degToRad(window.orientation)
         : 0
