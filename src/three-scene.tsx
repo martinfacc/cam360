@@ -13,6 +13,7 @@ export default function ThreeScene() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
   const [currentScene, setCurrentScene] = useState<THREE.Scene | null>(null)
+  const [currentCamera, setCurrentCamera] = useState<THREE.PerspectiveCamera | null>(null)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function ThreeScene() {
       1000
     )
     camera.position.set(0, 0, 0)
+    setCurrentCamera(camera)
 
     // Configurar el renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -105,6 +107,7 @@ export default function ThreeScene() {
     const animate = () => {
       requestAnimationFrame(animate)
       renderer.render(scene, camera)
+      setCurrentCamera(camera)
     }
     animate()
 
@@ -146,9 +149,30 @@ export default function ThreeScene() {
     }
   }
 
+  const removeClosestSphere = () => {
+    if (!currentScene || !currentCamera) return
+
+    const raycaster = new THREE.Raycaster()
+    const cameraDirection = new THREE.Vector3(0, 0, -1)
+    cameraDirection.applyQuaternion(currentCamera.quaternion)
+    raycaster.set(currentCamera.position, cameraDirection)
+
+    // Filtrar solo esferas
+    const spheres = currentScene.children.filter((obj) => obj instanceof THREE.Mesh)
+    const intersects = raycaster.intersectObjects(spheres)
+
+    if (intersects.length > 0) {
+      const closestSphere = intersects[0].object
+      currentScene.remove(closestSphere)
+      console.log('Esfera eliminada:', closestSphere)
+    }
+  }
+
   // Función para tomar foto y guardarla en estado como File
   const takePhoto = () => {
     if (!permissionGranted || !currentScene) return
+
+    removeClosestSphere()
 
     // Buscar la textura de video en la escena
     const videoTexture = currentScene.background as THREE.VideoTexture
