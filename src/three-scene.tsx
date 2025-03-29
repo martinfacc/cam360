@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import JSZip from 'jszip'
 import * as THREE from 'three'
 import { getColorFromPosition, getSphereTransforms } from './utils'
 
@@ -248,11 +249,22 @@ export default function ThreeScene() {
 
   // Función para descargar las fotos
   const downloadPhotos = () => {
+    if (photoFiles.length === 0) return
+
+    // Crear una instancia de JSZip
+    const zip = new JSZip()
+
+    // Añadir cada foto al archivo ZIP
     photoFiles.forEach((file) => {
-      const url = URL.createObjectURL(file)
+      zip.file(`${file.name}`, file)
+    })
+
+    // Generar el archivo ZIP y descargarlo
+    zip.generateAsync({ type: 'blob' }).then((content) => {
+      const url = URL.createObjectURL(content)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'photo.png'
+      a.download = 'photos.zip' // Nombre del archivo ZIP
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
