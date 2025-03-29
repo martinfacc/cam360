@@ -13,7 +13,6 @@ export default function ThreeScene() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
   const [currentScene, setCurrentScene] = useState<THREE.Scene | null>(null)
-  const [currentCamera, setCurrentCamera] = useState<THREE.PerspectiveCamera | null>(null)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
 
   useEffect(() => {
@@ -31,7 +30,6 @@ export default function ThreeScene() {
       1000
     )
     camera.position.set(0, 0, 0)
-    setCurrentCamera(camera)
 
     // Configurar el renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -107,7 +105,6 @@ export default function ThreeScene() {
     const animate = () => {
       requestAnimationFrame(animate)
       renderer.render(scene, camera)
-      setCurrentCamera(camera)
     }
     animate()
 
@@ -149,20 +146,33 @@ export default function ThreeScene() {
     }
   }
 
-  const removeClosestSphere = () => {
-    if (!currentScene || !currentCamera) return
+  const removeSphereInView = () => {
+    if (!currentScene) return
 
-    const raycaster = new THREE.Raycaster()
-    const cameraDirection = new THREE.Vector3(0, 0, -1)
-    cameraDirection.applyQuaternion(currentCamera.quaternion)
-    raycaster.set(currentCamera.position, cameraDirection)
+    let closestSphere: THREE.Object3D | null = null
+    let minAngle = Infinity
 
     // Filtrar solo esferas
     const spheres = currentScene.children.filter((obj) => obj instanceof THREE.Mesh)
-    const intersects = raycaster.intersectObjects(spheres)
+    const camera = currentScene.children.find(
+      (obj) => obj instanceof THREE.PerspectiveCamera
+    ) as THREE.PerspectiveCamera
+    if (!camera) return
 
-    if (intersects.length > 0) {
-      const closestSphere = intersects[0].object
+    const cameraDirection = new THREE.Vector3(0, 0, -1)
+    cameraDirection.applyQuaternion(camera.quaternion)
+
+    for (const sphere of spheres) {
+      const toSphere = new THREE.Vector3().subVectors(sphere.position, camera.position).normalize()
+      const angle = cameraDirection.angleTo(toSphere) // Calculamos el ángulo
+
+      if (angle < minAngle) {
+        minAngle = angle
+        closestSphere = sphere
+      }
+    }
+
+    if (closestSphere) {
       currentScene.remove(closestSphere)
       console.log('Esfera eliminada:', closestSphere)
     }
@@ -172,7 +182,7 @@ export default function ThreeScene() {
   const takePhoto = () => {
     if (!permissionGranted || !currentScene) return
 
-    removeClosestSphere()
+    removeSphereInView()
 
     // Buscar la textura de video en la escena
     const videoTexture = currentScene.background as THREE.VideoTexture
