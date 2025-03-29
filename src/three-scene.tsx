@@ -27,6 +27,8 @@ export default function ThreeScene() {
     y: 0,
     z: 0,
   })
+  const [isPortrait, setIsPortrait] = useState(false)
+  const [isLandscape, setIsLandscape] = useState(false)
 
   // Referencia para almacenar el offset de calibración
   const calibrationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
@@ -118,9 +120,11 @@ export default function ThreeScene() {
     window.matchMedia('(orientation: landscape)').addEventListener('change', (e) => {
       if (e.matches) {
         // Landscape mode
+        setIsLandscape(true)
         console.log('Landscape mode')
       } else {
         // Portrait mode
+        setIsLandscape(false)
         console.log('Portrait mode')
       }
     })
@@ -128,9 +132,11 @@ export default function ThreeScene() {
     window.matchMedia('(orientation: portrait)').addEventListener('change', (e) => {
       if (e.matches) {
         // Portrait mode
+        setIsPortrait(true)
         console.log('Portrait mode')
       } else {
         // Landscape mode
+        setIsPortrait(false)
         console.log('Landscape mode')
       }
     })
@@ -407,6 +413,12 @@ export default function ThreeScene() {
           Y: {currentCameraRotation.y.toFixed(2)}
           <br />
           Z: {currentCameraRotation.z.toFixed(2)}
+          <br />
+        </p>
+        <p>
+          Orientación de la pantalla:
+          <br />
+          {isPortrait ? 'Vertical' : isLandscape ? 'Horizontal' : 'Desconocida'}
           <br />
         </p>
       </div>
