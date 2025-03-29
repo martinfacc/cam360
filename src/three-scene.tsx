@@ -13,7 +13,9 @@ export default function ThreeScene() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
   const [currentScene, setCurrentScene] = useState<THREE.Scene | null>(null)
+  const [currentCamera, setCurrentCamera] = useState<THREE.PerspectiveCamera | null>(null)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
+  const [photosLeft, setPhotosLeft] = useState<number>(SPHERE_COUNT)
 
   useEffect(() => {
     const mountNode = mountRef.current
@@ -30,6 +32,7 @@ export default function ThreeScene() {
       1000
     )
     camera.position.set(0, 0, 0)
+    setCurrentCamera(camera)
 
     // Configurar el renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -147,20 +150,31 @@ export default function ThreeScene() {
   }
 
   const removeSphereInView = () => {
-    if (!currentScene) return
+    if (!currentScene) {
+      console.error('No hay escena actual.')
+      return
+    }
 
-    let closestSphere: THREE.Object3D | null = null
+    if (!currentCamera) {
+      console.error('No hay cámara actual.')
+      return
+    }
+
+    console.log('currentCamera', currentCamera)
+
+    let closestSphere: THREE.Mesh | null = null
     let minAngle = Infinity
 
-    // Filtrar solo esferas
-    const spheres = currentScene.children.filter((obj) => obj instanceof THREE.Mesh)
-    const camera = currentScene.children.find(
-      (obj) => obj instanceof THREE.PerspectiveCamera
-    ) as THREE.PerspectiveCamera
-    if (!camera) return
+    // Filtrar solo esferas (Mesh con geometría de tipo SphereGeometry)
+    const spheres = currentScene.children.filter(
+      (obj) => obj instanceof THREE.Mesh && obj.geometry instanceof THREE.SphereGeometry
+    ) as THREE.Mesh[]
 
-    const cameraDirection = new THREE.Vector3(0, 0, -1)
-    cameraDirection.applyQuaternion(camera.quaternion)
+    // Buscar la cámara en la escena (de forma recursiva si es necesario)
+    const camera = currentCamera as THREE.PerspectiveCamera
+
+    // Obtener la dirección de la cámara
+    const cameraDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
 
     for (const sphere of spheres) {
       const toSphere = new THREE.Vector3().subVectors(sphere.position, camera.position).normalize()
@@ -172,9 +186,10 @@ export default function ThreeScene() {
       }
     }
 
-    if (closestSphere) {
+    if (closestSphere && currentScene.children.includes(closestSphere)) {
       currentScene.remove(closestSphere)
       console.log('Esfera eliminada:', closestSphere)
+      setPhotosLeft((prev) => prev - 1)
     }
   }
 
@@ -246,7 +261,7 @@ export default function ThreeScene() {
       )}
 
       {/* Botón para tomar foto (solo se muestra si ya se tienen permisos) */}
-      {permissionGranted && (
+      {permissionGranted && photosLeft > 0 && (
         <button
           style={{
             position: 'absolute',
@@ -259,11 +274,11 @@ export default function ThreeScene() {
           }}
           onClick={takePhoto}
         >
-          Tomar Foto
+          Tomar Foto ({photosLeft}/16)
         </button>
       )}
 
-      {photoFiles.length > 0 && (
+      {photoFiles.length > 0 && photosLeft === 0 && (
         <button
           style={{
             position: 'absolute',
