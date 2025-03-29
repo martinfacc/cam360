@@ -1,60 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
-import { getColorFromPosition, getSphereTransforms } from './utils'
-
-const DISTANCE = 5
-const SPHERE_RADIUS = 0.3
-const SPHERE_SEGMENTS = 16
-const SPHERE_COUNT = 16
-const SPHERE_OPACITY = 0.5
 
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
-  const [currentOrientation, setCurrentOrientation] = useState({
-    alpha: 0,
-    beta: 0,
-    gamma: 0,
-  })
-  const [currentScreenOrientation, setCurrentScreenOrientation] = useState(0)
-  const [currentCameraPosition, setCurrentCameraPosition] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  })
-  const [currentCameraRotation, setCurrentCameraRotation] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  })
-  const [isPortrait, setIsPortrait] = useState(false)
-  const [isLandscape, setIsLandscape] = useState(false)
-
-  // Referencia para almacenar el offset de calibración
-  const calibrationRef = useRef({ alpha: 0, beta: 0, gamma: 0 })
-
-  // Objeto para guardar los últimos datos de orientación
-  const orientationData = useRef({ alpha: 0, beta: 0, gamma: 0 })
-
-  // Referencia para almacenar el último Euler calculado
-  const previousEulerRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
-
-  // Función para calibrar: se almacena la lectura actual como offset
-  const handleCalibrate = () => {
-    calibrationRef.current = {
-      alpha: orientationData.current.alpha,
-      beta: orientationData.current.beta,
-      gamma: orientationData.current.gamma,
-    }
-    console.log('Calibrado:', calibrationRef.current)
-  }
 
   useEffect(() => {
     const mountNode = mountRef.current
     if (!mountNode) return
     if (!permissionGranted) return
-
-    const elements: THREE.Mesh[] = []
 
     // Crear la escena y la cámara
     const scene = new THREE.Scene()
@@ -71,22 +25,15 @@ export default function ThreeScene() {
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
 
-    // Generar los puntos en la esfera
-    const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
-    sphereTransforms.forEach((cfg) => {
-      const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
-      const color = getColorFromPosition(cfg.pos)
-      const material = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: SPHERE_OPACITY,
-      })
-      const sphere = new THREE.Mesh(geometry, material)
-      sphere.position.set(...cfg.pos)
-      sphere.rotation.set(...cfg.rot)
-      scene.add(sphere)
-      elements.push(sphere)
+    const squareGeometry = new THREE.PlaneGeometry(2, 2)
+    const squareMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      side: THREE.DoubleSide,
     })
+    const squareMesh = new THREE.Mesh(squareGeometry, squareMaterial)
+    squareMesh.position.set(0, 0, 25)
+    squareMesh.rotation.set(0, 0, 0)
+    scene.add(squareMesh)
 
     // Configurar el feed de la cámara trasera y usarlo como fondo
     const video = document.createElement('video')
@@ -110,115 +57,22 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Función para manejar los eventos deviceorientation
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      orientationData.current.alpha = event.alpha !== null ? (event.alpha + 360) % 360 : 0
-      orientationData.current.beta =
-        event.beta !== null ? Math.max(-180, Math.min(180, event.beta)) : 0
-      orientationData.current.gamma =
-        event.gamma !== null ? Math.max(-90, Math.min(90, event.gamma)) : 0
+      if (!event.alpha || !event.beta || !event.gamma) return
+
+      // Convertir los ángulos de Euler a radianes
+      const alpha = THREE.MathUtils.degToRad(event.alpha)
+      const beta = THREE.MathUtils.degToRad(event.beta)
+      const gamma = THREE.MathUtils.degToRad(event.gamma)
+
+      // Aplicar la rotación a la cámara
+      camera.rotation.set(beta, alpha, -gamma)
     }
+
     window.addEventListener('deviceorientation', handleOrientation, true)
-
-    window.matchMedia('(orientation: landscape)').addEventListener('change', (e) => {
-      if (e.matches) {
-        // Landscape mode
-        setIsLandscape(true)
-      } else {
-        setIsLandscape(false)
-      }
-    })
-    window.matchMedia('(orientation: portrait)').addEventListener('change', (e) => {
-      if (e.matches) {
-        setIsPortrait(true)
-      } else {
-        setIsPortrait(false)
-      }
-    })
-
-    // Corrección fija para alinear el dispositivo con la escena
-    const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
 
     const animate = () => {
       requestAnimationFrame(animate)
-
-      // Aplicamos la calibración: restamos el offset a la lectura actual
-      const calibratedAlpha =
-        (orientationData.current.alpha - calibrationRef.current.alpha + 360) % 360
-      const calibratedBeta = orientationData.current.beta - calibrationRef.current.beta
-      // Ignoramos gamma para evitar roll no deseado
-
-      // Actualizamos el estado de la orientación
-      setCurrentOrientation({
-        alpha: calibratedAlpha,
-        beta: calibratedBeta,
-        gamma: orientationData.current.gamma,
-      })
-
-      // Convertir a radianes
-      const alphaRad = THREE.MathUtils.degToRad(calibratedAlpha)
-      const betaRad = THREE.MathUtils.degToRad(calibratedBeta)
-
-      // Creamos un Euler con el orden "YXZ"
-      const euler = new THREE.Euler(betaRad, alphaRad, 0, 'YXZ')
-
-      // Obtenemos el Euler previo
-      const previousEuler = previousEulerRef.current
-
-      // Definimos un umbral (por ejemplo, 30° convertidos a radianes)
-      const threshold = THREE.MathUtils.degToRad(30)
-
-      // Si la diferencia en alguno de los ángulos es mayor al umbral, no actualizamos la cámara
-      if (
-        Math.abs(euler.x - previousEuler.x) <= threshold &&
-        Math.abs(euler.y - previousEuler.y) <= threshold &&
-        Math.abs(euler.z - previousEuler.z) <= threshold
-      ) {
-        const quaternion = new THREE.Quaternion()
-        quaternion.setFromEuler(euler)
-
-        // Aplicamos la corrección fija
-        quaternion.multiply(q1)
-
-        // Ajustamos según la orientación de la pantalla
-        const screenOrientationAngle =
-          screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
-        setCurrentScreenOrientation(screenOrientationAngle)
-
-        const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
-        const screenTransform = new THREE.Quaternion()
-        screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
-        quaternion.multiply(screenTransform)
-
-        // Asignamos el quaternion resultante a la cámara
-        camera.quaternion.copy(quaternion)
-
-        // Actualizamos la posición de la cámara
-        const cameraPosition = new THREE.Vector3(
-          currentCameraPosition.x,
-          currentCameraPosition.y,
-          currentCameraPosition.z
-        )
-        cameraPosition.applyQuaternion(quaternion)
-        camera.position.copy(cameraPosition)
-        setCurrentCameraPosition({
-          x: cameraPosition.x,
-          y: cameraPosition.y,
-          z: cameraPosition.z,
-        })
-        setCurrentCameraRotation({
-          x: quaternion.x,
-          y: quaternion.y,
-          z: quaternion.z,
-        })
-      } else {
-        // Se detectó un cambio brusco, por lo que no se actualiza el movimiento.
-        console.log('Cambio brusco detectado, movimiento ignorado.')
-      }
-
-      // Actualizamos el Euler previo para la próxima iteración
-      previousEulerRef.current.copy(euler)
-
       renderer.render(scene, camera)
     }
     animate()
@@ -240,7 +94,6 @@ export default function ThreeScene() {
         mountNode.removeChild(renderer.domElement)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted])
 
   // Solicitar permiso para acceder a los sensores (requerido en iOS 13+)
@@ -281,63 +134,6 @@ export default function ThreeScene() {
           Habilitar Sensores
         </button>
       )}
-      {permissionGranted && (
-        <button
-          style={{
-            position: 'absolute',
-            zIndex: 1,
-            top: '1rem',
-            right: '1rem',
-            padding: '0.5rem',
-            fontSize: '1rem',
-          }}
-          onClick={handleCalibrate}
-        >
-          Calibrar
-        </button>
-      )}
-      <div
-        style={{
-          position: 'absolute',
-          zIndex: 1,
-          top: '1rem',
-          left: '1rem',
-          color: 'white',
-        }}
-      >
-        <p>
-          Orientación:
-          <br />
-          Alpha: {currentOrientation.alpha.toFixed(2)}°<br />
-          Beta: {currentOrientation.beta.toFixed(2)}°<br />
-          Gamma: {currentOrientation.gamma.toFixed(2)}°<br />
-          Ángulo de pantalla: {currentScreenOrientation.toFixed(2)}°
-        </p>
-        <p>
-          Posición de la cámara:
-          <br />
-          X: {currentCameraPosition.x.toFixed(2)}
-          <br />
-          Y: {currentCameraPosition.y.toFixed(2)}
-          <br />
-          Z: {currentCameraPosition.z.toFixed(2)}
-          <br />
-          Rotación de la cámara:
-          <br />
-          X: {currentCameraRotation.x.toFixed(2)}
-          <br />
-          Y: {currentCameraRotation.y.toFixed(2)}
-          <br />
-          Z: {currentCameraRotation.z.toFixed(2)}
-          <br />
-        </p>
-        <p>
-          Modo de pantalla:
-          <br />
-          {isPortrait ? 'Vertical' : isLandscape ? 'Horizontal' : 'Desconocido'}
-          <br />
-        </p>
-      </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
     </React.Fragment>
   )
