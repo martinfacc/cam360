@@ -146,10 +146,22 @@ export default function ThreeScene() {
 
   // Función para tomar foto y guardarla en estado como File
   const takePhoto = () => {
-    if (rendererRef.current) {
-      rendererRef.current.domElement.toBlob((blob) => {
+    const video = document.querySelector('video') // Obtiene el video de la cámara
+    if (!video) {
+      console.error('No se encontró el video')
+      return
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], 'photo.png', { type: blob.type })
+          const file = new File([blob], 'photo.png', { type: 'image/png' })
           setPhotoFiles((prevFiles) => [...prevFiles, file])
           console.log('Foto guardada en el estado:', file)
         } else {
