@@ -77,7 +77,7 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    const alpha = 0
+    let alpha = 0
     let beta = 0
     let gamma = 0
 
@@ -85,7 +85,7 @@ export default function ThreeScene() {
       if (!event.alpha || !event.beta || !event.gamma) return
 
       // Convertir los ángulos de Euler a radianes
-      // const alpha = THREE.MathUtils.degToRad(event.alpha)
+      alpha = THREE.MathUtils.degToRad(event.alpha)
       beta = THREE.MathUtils.degToRad(event.beta)
       gamma = THREE.MathUtils.degToRad(event.gamma)
 
