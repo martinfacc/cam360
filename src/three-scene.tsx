@@ -10,6 +10,7 @@ const SPHERE_OPACITY = 0.5
 
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
@@ -31,7 +32,9 @@ export default function ThreeScene() {
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
+    rendererRef.current = renderer
 
+    // Agregar esferas
     const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
     sphereTransforms.forEach((cfg) => {
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
@@ -47,6 +50,7 @@ export default function ThreeScene() {
       scene.add(sphere)
     })
 
+    // Agregar video de fondo de la cámara
     const video = document.createElement('video')
     video.autoplay = true
     video.playsInline = true
@@ -68,22 +72,19 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
-    // Variables para almacenar los ángulos convertidos a radianes
+    // Configurar la orientación del dispositivo
     let alpha = 0,
       beta = 0,
       gamma = 0
 
-    // Objetos auxiliares para la conversión a quaternion
     const euler = new THREE.Euler()
     const deviceQuaternion = new THREE.Quaternion()
-    // q1 corrige la diferencia entre el sistema de referencia del dispositivo y el de three.js
+    // Corrección para alinear el sistema de referencia del dispositivo con three.js
     const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)
 
-    // Función para manejar la orientación del dispositivo
     const handleOrientation = (event: DeviceOrientationEvent) => {
       if (event.alpha === null || event.beta === null || event.gamma === null) return
 
-      // Convertir los ángulos a radianes
       alpha = THREE.MathUtils.degToRad(event.alpha)
       beta = THREE.MathUtils.degToRad(event.beta)
       gamma = THREE.MathUtils.degToRad(event.gamma)
@@ -91,9 +92,7 @@ export default function ThreeScene() {
       // Se utiliza el orden 'YXZ' para evitar efectos inesperados
       euler.set(beta, alpha, -gamma, 'YXZ')
       deviceQuaternion.setFromEuler(euler)
-      // Aplicar corrección para alinear con el mundo three.js
       deviceQuaternion.multiply(q1)
-      // Actualizar la orientación de la cámara usando el quaternion calculado
       camera.quaternion.copy(deviceQuaternion)
     }
 
@@ -144,13 +143,25 @@ export default function ThreeScene() {
     }
   }
 
+  // Función para tomar foto (captura el contenido del canvas)
+  const takePhoto = () => {
+    if (rendererRef.current) {
+      const dataUrl = rendererRef.current.domElement.toDataURL('image/png')
+      const win = window.open()
+      if (win) {
+        win.document.body.innerHTML = `<img src="${dataUrl}" alt="Foto tomada" />`
+      }
+    }
+  }
+
   return (
     <>
+      {/* Botón para solicitar permisos */}
       {!permissionGranted && (
         <button
           style={{
             position: 'absolute',
-            zIndex: 1,
+            zIndex: 2,
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
@@ -162,6 +173,45 @@ export default function ThreeScene() {
           Habilitar Sensores
         </button>
       )}
+
+      {/* Botón para tomar foto (solo se muestra si ya se tienen permisos) */}
+      {permissionGranted && (
+        <button
+          style={{
+            position: 'absolute',
+            zIndex: 2,
+            bottom: '2rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '1rem',
+            fontSize: '1.2rem',
+          }}
+          onClick={takePhoto}
+        >
+          Tomar Foto
+        </button>
+      )}
+
+      {/* Aro central para composición */}
+      {permissionGranted && (
+        <div
+          style={{
+            position: 'absolute',
+            zIndex: 2,
+            top: '50%',
+            left: '50%',
+            width: '150px',
+            height: '150px',
+            marginLeft: '-75px',
+            marginTop: '-75px',
+            border: '4px solid rgba(255, 255, 255, 0.8)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* Contenedor del renderer */}
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
     </>
   )
