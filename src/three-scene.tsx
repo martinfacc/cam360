@@ -6,7 +6,7 @@ import { getColorFromPosition, getSphereTransforms } from './utils'
 const DISTANCE = 5
 const SPHERE_RADIUS = 0.3
 const SPHERE_SEGMENTS = 16
-const SPHERE_COUNT = 30
+const SPHERE_COUNT = 42
 const SPHERE_OPACITY = 0.5
 
 export default function ThreeScene() {
