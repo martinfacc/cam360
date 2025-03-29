@@ -166,29 +166,35 @@ export default function ThreeScene() {
       return null
     }
 
-    console.log('currentCamera', currentCamera)
-
     let closestSphere: THREE.Mesh | null = null
     let minAngle = Infinity
 
-    // Filtrar solo esferas (Mesh con geometría de tipo SphereGeometry)
     const spheres = currentScene.children.filter(
       (obj) => obj instanceof THREE.Mesh && obj.geometry instanceof THREE.SphereGeometry
     ) as THREE.Mesh[]
 
-    // Buscar la cámara en la escena (de forma recursiva si es necesario)
     const camera = currentCamera as THREE.PerspectiveCamera
-
-    // Obtener la dirección de la cámara
     const cameraDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
 
-    for (const sphere of spheres) {
-      const toSphere = new THREE.Vector3().subVectors(sphere.position, camera.position).normalize()
-      const angle = cameraDirection.angleTo(toSphere) // Calculamos el ángulo
+    // Calcular la punta de la línea en la dirección de la cámara con longitud DISTANCE
+    const lineEnd = new THREE.Vector3()
+      .copy(camera.position)
+      .add(cameraDirection.multiplyScalar(DISTANCE))
 
-      if (angle < minAngle) {
-        minAngle = angle
-        closestSphere = sphere
+    for (const sphere of spheres) {
+      const sphereCenter = sphere.position
+      const distanceToLineEnd = lineEnd.distanceTo(sphereCenter) // Distancia de la punta de la línea al centro de la esfera
+
+      console.log(`Distancia a la esfera ${sphere.userData.id}:`, distanceToLineEnd)
+
+      if (distanceToLineEnd <= SPHERE_RADIUS * 2) {
+        const toSphere = new THREE.Vector3().subVectors(sphereCenter, camera.position).normalize()
+        const angle = cameraDirection.angleTo(toSphere)
+
+        if (angle < minAngle) {
+          minAngle = angle
+          closestSphere = sphere
+        }
       }
     }
 
