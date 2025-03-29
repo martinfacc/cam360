@@ -89,9 +89,9 @@ export default function ThreeScene() {
 
       // Actualizar la posición de la cámara
       camera.rotation.set(
-        Math.sin(currentOrientation.alpha) * 5,
-        Math.sin(currentOrientation.beta) * 5,
-        Math.cos(currentOrientation.alpha) * 5
+        currentOrientation.beta,
+        currentOrientation.alpha,
+        currentOrientation.gamma
       )
 
       renderer.render(scene, camera)
