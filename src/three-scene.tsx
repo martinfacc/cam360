@@ -31,9 +31,14 @@ export default function ThreeScene() {
       side: THREE.DoubleSide,
     })
     const squareMesh = new THREE.Mesh(squareGeometry, squareMaterial)
-    squareMesh.position.set(0, 0, 25)
+    squareMesh.position.set(0, 0, -25)
     squareMesh.rotation.set(0, 0, 0)
     scene.add(squareMesh)
+
+    const squareMesh2 = new THREE.Mesh(squareGeometry, squareMaterial)
+    squareMesh2.position.set(0, 0, 25)
+    squareMesh2.rotation.set(0, Math.PI, 0)
+    scene.add(squareMesh2)
 
     // Configurar el feed de la cámara trasera y usarlo como fondo
     const video = document.createElement('video')
