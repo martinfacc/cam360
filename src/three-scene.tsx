@@ -1,8 +1,12 @@
 import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
+import { getColorFromPosition, getSphereTransforms } from './utils'
 
-const DISTANCE = 25
-const SIZE = 5
+const DISTANCE = 5
+const SPHERE_RADIUS = 0.3
+const SPHERE_SEGMENTS = 16
+const SPHERE_COUNT = 16
+const SPHERE_OPACITY = 0.5
 
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
@@ -28,26 +32,19 @@ export default function ThreeScene() {
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
 
-    const positions: Array<{
-      pos: [number, number, number]
-      rot: [number, number, number]
-      color: string
-    }> = [
-      { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
-      { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
-      { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
-      { pos: [0, -DISTANCE, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
-      { pos: [-DISTANCE, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
-      { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
-    ]
-
-    positions.forEach(({ pos, rot, color }) => {
-      const geometry = new THREE.PlaneGeometry(SIZE, SIZE)
-      const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
-      const plane = new THREE.Mesh(geometry, material)
-      plane.position.set(...pos)
-      plane.rotation.set(...rot)
-      scene.add(plane)
+    const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
+    sphereTransforms.forEach((cfg) => {
+      const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
+      const color = getColorFromPosition(cfg.pos)
+      const material = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: SPHERE_OPACITY,
+      })
+      const sphere = new THREE.Mesh(geometry, material)
+      sphere.position.set(...cfg.pos)
+      sphere.rotation.set(...cfg.rot)
+      scene.add(sphere)
     })
 
     const video = document.createElement('video')
