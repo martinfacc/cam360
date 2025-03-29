@@ -6,7 +6,7 @@ import { getColorFromPosition, getSphereTransforms } from './utils'
 const DISTANCE = 5
 const SPHERE_RADIUS = 0.3
 const SPHERE_SEGMENTS = 16
-const SPHERE_COUNT = 24
+const SPHERE_COUNT = 30
 const SPHERE_OPACITY = 0.5
 
 export default function ThreeScene() {
@@ -307,7 +307,7 @@ export default function ThreeScene() {
           }}
           onClick={takePhoto}
         >
-          Tomar Foto ({photosLeft}/16)
+          Tomar Foto ({photosLeft}/{SPHERE_COUNT})
         </button>
       )}
 
@@ -317,7 +317,8 @@ export default function ThreeScene() {
             position: 'absolute',
             zIndex: 2,
             bottom: '2rem',
-            right: '2rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
             padding: '1rem',
             fontSize: '1.2rem',
           }}
