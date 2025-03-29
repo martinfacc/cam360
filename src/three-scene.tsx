@@ -77,32 +77,36 @@ export default function ThreeScene() {
         console.error('Error al acceder a la cámara:', err)
       })
 
+    const alpha = 0
+    let beta = 0
+    let gamma = 0
+
     const handleOrientation = (event: DeviceOrientationEvent) => {
       if (!event.alpha || !event.beta || !event.gamma) return
 
       // Convertir los ángulos de Euler a radianes
       // const alpha = THREE.MathUtils.degToRad(event.alpha)
-      const beta = THREE.MathUtils.degToRad(event.beta)
-      const gamma = THREE.MathUtils.degToRad(event.gamma)
+      beta = THREE.MathUtils.degToRad(event.beta)
+      gamma = THREE.MathUtils.degToRad(event.gamma)
 
       setCurrentOrientation({
-        alpha: 0,
+        alpha,
         beta,
         gamma,
       })
-
-      const animate = () => {
-        requestAnimationFrame(animate)
-
-        // Actualizar la posición de la cámara
-        camera.rotation.set(beta, 0, -gamma)
-
-        renderer.render(scene, camera)
-      }
-      animate()
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
+
+    const animate = () => {
+      requestAnimationFrame(animate)
+
+      // Actualizar la posición de la cámara
+      camera.rotation.set(beta, alpha, -gamma)
+
+      renderer.render(scene, camera)
+    }
+    animate()
 
     // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
