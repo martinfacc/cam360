@@ -36,6 +36,9 @@ export default function ThreeScene() {
   // Objeto para guardar los últimos datos de orientación
   const orientationData = useRef({ alpha: 0, beta: 0, gamma: 0 })
 
+  // Referencia para almacenar el último Euler calculado
+  const previousEulerRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
+
   // Función para calibrar: se almacena la lectura actual como offset
   const handleCalibrate = () => {
     calibrationRef.current = {
@@ -122,16 +125,13 @@ export default function ThreeScene() {
         // Landscape mode
         setIsLandscape(true)
       } else {
-        // Portrait mode
         setIsLandscape(false)
       }
     })
     window.matchMedia('(orientation: portrait)').addEventListener('change', (e) => {
       if (e.matches) {
-        // Portrait mode
         setIsPortrait(true)
       } else {
-        // Landscape mode
         setIsPortrait(false)
       }
     })
@@ -161,44 +161,63 @@ export default function ThreeScene() {
 
       // Creamos un Euler con el orden "YXZ"
       const euler = new THREE.Euler(betaRad, alphaRad, 0, 'YXZ')
-      const quaternion = new THREE.Quaternion()
-      quaternion.setFromEuler(euler)
 
-      // Aplicamos la corrección fija
-      quaternion.multiply(q1)
+      // Obtenemos el Euler previo
+      const previousEuler = previousEulerRef.current
 
-      // Ajustamos según la orientación de la pantalla
-      const screenOrientationAngle =
-        screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
+      // Definimos un umbral (por ejemplo, 30° convertidos a radianes)
+      const threshold = THREE.MathUtils.degToRad(30)
 
-      setCurrentScreenOrientation(screenOrientationAngle)
+      // Si la diferencia en alguno de los ángulos es mayor al umbral, no actualizamos la cámara
+      if (
+        Math.abs(euler.x - previousEuler.x) <= threshold &&
+        Math.abs(euler.y - previousEuler.y) <= threshold &&
+        Math.abs(euler.z - previousEuler.z) <= threshold
+      ) {
+        const quaternion = new THREE.Quaternion()
+        quaternion.setFromEuler(euler)
 
-      const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
-      const screenTransform = new THREE.Quaternion()
-      screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
-      quaternion.multiply(screenTransform)
+        // Aplicamos la corrección fija
+        quaternion.multiply(q1)
 
-      // Asignamos el quaternion resultante a la cámara
-      camera.quaternion.copy(quaternion)
+        // Ajustamos según la orientación de la pantalla
+        const screenOrientationAngle =
+          screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
+        setCurrentScreenOrientation(screenOrientationAngle)
 
-      // Actualizamos la posición de la cámara
-      const cameraPosition = new THREE.Vector3(
-        currentCameraPosition.x,
-        currentCameraPosition.y,
-        currentCameraPosition.z
-      )
-      cameraPosition.applyQuaternion(quaternion)
-      camera.position.copy(cameraPosition)
-      setCurrentCameraPosition({
-        x: cameraPosition.x,
-        y: cameraPosition.y,
-        z: cameraPosition.z,
-      })
-      setCurrentCameraRotation({
-        x: quaternion.x,
-        y: quaternion.y,
-        z: quaternion.z,
-      })
+        const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
+        const screenTransform = new THREE.Quaternion()
+        screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
+        quaternion.multiply(screenTransform)
+
+        // Asignamos el quaternion resultante a la cámara
+        camera.quaternion.copy(quaternion)
+
+        // Actualizamos la posición de la cámara
+        const cameraPosition = new THREE.Vector3(
+          currentCameraPosition.x,
+          currentCameraPosition.y,
+          currentCameraPosition.z
+        )
+        cameraPosition.applyQuaternion(quaternion)
+        camera.position.copy(cameraPosition)
+        setCurrentCameraPosition({
+          x: cameraPosition.x,
+          y: cameraPosition.y,
+          z: cameraPosition.z,
+        })
+        setCurrentCameraRotation({
+          x: quaternion.x,
+          y: quaternion.y,
+          z: quaternion.z,
+        })
+      } else {
+        // Se detectó un cambio brusco, por lo que no se actualiza el movimiento.
+        console.log('Cambio brusco detectado, movimiento ignorado.')
+      }
+
+      // Actualizamos el Euler previo para la próxima iteración
+      previousEulerRef.current.copy(euler)
 
       renderer.render(scene, camera)
     }
@@ -292,7 +311,7 @@ export default function ThreeScene() {
           Alpha: {currentOrientation.alpha.toFixed(2)}°<br />
           Beta: {currentOrientation.beta.toFixed(2)}°<br />
           Gamma: {currentOrientation.gamma.toFixed(2)}°<br />
-          Angulo de pantalla: {currentScreenOrientation.toFixed(2)}°
+          Ángulo de pantalla: {currentScreenOrientation.toFixed(2)}°
         </p>
         <p>
           Posición de la cámara:
