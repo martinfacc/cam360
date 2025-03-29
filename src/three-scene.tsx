@@ -188,7 +188,8 @@ export default function ThreeScene() {
 
       console.log(`Distancia a la esfera ${sphere.userData.id}:`, distanceToLineEnd)
 
-      if (distanceToLineEnd <= SPHERE_RADIUS * 2) {
+      // Comprobar si la esfera está dentro del rango de distancia
+      if (distanceToLineEnd <= SPHERE_RADIUS * 2.5) {
         const toSphere = new THREE.Vector3().subVectors(sphereCenter, camera.position).normalize()
         const angle = cameraDirection.angleTo(toSphere)
 
