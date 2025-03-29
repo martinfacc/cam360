@@ -12,6 +12,7 @@ export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
+  const [currentScene, setCurrentScene] = useState<THREE.Scene | null>(null)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function ThreeScene() {
 
     // Crear la escena y la cámara
     const scene = new THREE.Scene()
+    setCurrentScene(scene)
     const camera = new THREE.PerspectiveCamera(
       75,
       mountNode.clientWidth / mountNode.clientHeight,
@@ -146,12 +148,16 @@ export default function ThreeScene() {
 
   // Función para tomar foto y guardarla en estado como File
   const takePhoto = () => {
-    const video = document.querySelector('video') // Obtiene el video de la cámara
-    if (!video) {
-      console.error('No se encontró el video')
+    if (!permissionGranted || !currentScene) return
+
+    // Buscar la textura de video en la escena
+    const videoTexture = currentScene.background as THREE.VideoTexture
+    if (!(videoTexture instanceof THREE.VideoTexture) || !videoTexture.image) {
+      console.error('No se encontró la textura de video.')
       return
     }
 
+    const video = videoTexture.image as HTMLVideoElement
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
