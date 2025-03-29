@@ -81,12 +81,12 @@ export default function ThreeScene() {
       if (!event.alpha || !event.beta || !event.gamma) return
 
       // Convertir los ángulos de Euler a radianes
-      const alpha = THREE.MathUtils.degToRad(event.alpha)
+      // const alpha = THREE.MathUtils.degToRad(event.alpha)
       const beta = THREE.MathUtils.degToRad(event.beta)
       const gamma = THREE.MathUtils.degToRad(event.gamma)
 
       setCurrentOrientation({
-        alpha,
+        alpha: 0,
         beta,
         gamma,
       })
@@ -95,7 +95,7 @@ export default function ThreeScene() {
         requestAnimationFrame(animate)
 
         // Actualizar la posición de la cámara
-        camera.rotation.set(beta, alpha, -gamma)
+        camera.rotation.set(beta, 0, -gamma)
 
         renderer.render(scene, camera)
       }
