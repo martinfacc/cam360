@@ -1,14 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
 
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
-  const [currentOrientation, setCurrentOrientation] = useState({
-    alpha: 0,
-    beta: 0,
-    gamma: 0,
-  })
 
   useEffect(() => {
     const mountNode = mountRef.current
@@ -30,6 +25,7 @@ export default function ThreeScene() {
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
 
+    // Agregar un objeto de referencia (ej. un plano)
     const squareGeometry = new THREE.PlaneGeometry(2, 2)
     const squareMaterial = new THREE.MeshBasicMaterial({
       color: 0xff0000,
@@ -37,80 +33,48 @@ export default function ThreeScene() {
     })
     const squareMesh = new THREE.Mesh(squareGeometry, squareMaterial)
     squareMesh.position.set(0, 0, -25)
-    squareMesh.rotation.set(0, 0, 0)
     scene.add(squareMesh)
 
-    const squareMesh2 = new THREE.Mesh(squareGeometry, squareMaterial)
-    squareMesh2.position.set(0, 0, 25)
-    squareMesh2.rotation.set(0, Math.PI, 0)
-    scene.add(squareMesh2)
+    // Variables para almacenar los ángulos convertidos a radianes
+    let alpha = 0,
+      beta = 0,
+      gamma = 0
 
-    const squareMesh3 = new THREE.Mesh(squareGeometry, squareMaterial)
-    squareMesh3.position.set(0, -25, 0)
-    squareMesh3.rotation.set(Math.PI / 2, 0, 0)
-    scene.add(squareMesh3)
+    // Objetos auxiliares para la conversión a quaternion
+    const euler = new THREE.Euler()
+    const deviceQuaternion = new THREE.Quaternion()
+    // q1 corrige la diferencia entre el sistema de referencia del dispositivo y el de three.js
+    const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2)
 
-    const squareMesh4 = new THREE.Mesh(squareGeometry, squareMaterial)
-    squareMesh4.position.set(0, 25, 0)
-    squareMesh4.rotation.set(-Math.PI / 2, 0, 0)
-    scene.add(squareMesh4)
-
-    // Configurar el feed de la cámara trasera y usarlo como fondo
-    const video = document.createElement('video')
-    video.autoplay = true
-    video.playsInline = true
-    video.muted = true
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { facingMode: { exact: 'environment' } },
-      })
-      .then((stream) => {
-        video.srcObject = stream
-        video.play()
-        const videoTexture = new THREE.VideoTexture(video)
-        videoTexture.minFilter = THREE.LinearFilter
-        videoTexture.magFilter = THREE.LinearFilter
-        videoTexture.format = THREE.RGBFormat
-        scene.background = videoTexture
-      })
-      .catch((err) => {
-        console.error('Error al acceder a la cámara:', err)
-      })
-
-    let alpha = 0
-    let beta = 0
-    let gamma = 0
-
+    // Función para manejar la orientación del dispositivo
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (!event.alpha || !event.beta || !event.gamma) return
+      if (event.alpha === null || event.beta === null || event.gamma === null) return
 
-      // Convertir los ángulos de Euler a radianes
+      // Convertir los ángulos a radianes
       alpha = THREE.MathUtils.degToRad(event.alpha)
       beta = THREE.MathUtils.degToRad(event.beta)
       gamma = THREE.MathUtils.degToRad(event.gamma)
 
-      setCurrentOrientation({
-        alpha,
-        beta,
-        gamma,
-      })
+      // Se utiliza el orden 'YXZ' para evitar efectos inesperados
+      euler.set(beta, alpha, -gamma, 'YXZ')
+      deviceQuaternion.setFromEuler(euler)
+      // Aplicar corrección para alinear con el mundo three.js
+      deviceQuaternion.multiply(q1)
+      // Actualizar la orientación de la cámara usando el quaternion calculado
+      camera.quaternion.copy(deviceQuaternion)
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
+    // Loop de animación
     const animate = () => {
       requestAnimationFrame(animate)
-
-      // Actualizar la posición de la cámara
-      camera.rotation.set(beta, gamma, alpha, 'XZY')
-
       renderer.render(scene, camera)
     }
     animate()
 
-    // Actualizar tamaño al redimensionar
+    // Ajustar el tamaño al redimensionar
     const onWindowResize = () => {
-      const mountNode = mountRef.current
       if (!mountNode) return
       camera.aspect = mountNode.clientWidth / mountNode.clientHeight
       camera.updateProjectionMatrix()
@@ -148,7 +112,7 @@ export default function ThreeScene() {
   }
 
   return (
-    <React.Fragment>
+    <>
       {!permissionGranted && (
         <button
           style={{
@@ -165,24 +129,7 @@ export default function ThreeScene() {
           Habilitar Sensores
         </button>
       )}
-      <div
-        style={{
-          position: 'absolute',
-          zIndex: 1,
-          top: '10px',
-          left: '10px',
-          color: 'white',
-        }}
-      >
-        Orientación:
-        <br />
-        Alpha: {currentOrientation.alpha.toFixed(2)}
-        <br />
-        Beta: {currentOrientation.beta.toFixed(2)}
-        <br />
-        Gamma: {currentOrientation.gamma.toFixed(2)}
-      </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
-    </React.Fragment>
+    </>
   )
 }
