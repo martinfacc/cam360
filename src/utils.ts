@@ -1,6 +1,21 @@
 import { type TSphereTransform } from "./types"
 
 /**
+ * Genera un UUIDv4 (Universally Unique Identifier) de 128 bits.
+ * Este ID es único y se utiliza para identificar de manera única cada punto en la esfera.
+ *
+ * @returns Un string que representa el ID único.
+ */
+export function generateUniqueId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
+
+/**
  * Genera 'n' puntos en la superficie de una esfera de radio 'r'.
  * Para cada punto se devuelve su posición en 3D y su rotación hacia el centro.
  *
@@ -35,7 +50,10 @@ export function getSphereTransforms(r: number, n: number): TSphereTransform[] {
 
     const rot: [number, number, number] = [yaw, pitch, roll]
 
-    puntos.push({ pos, rot })
+    // Agregamos el punto a la lista con un ID único
+    const id = generateUniqueId()
+
+    puntos.push({ id, pos, rot })
   }
 
   return puntos

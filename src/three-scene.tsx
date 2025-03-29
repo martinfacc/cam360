@@ -53,6 +53,12 @@ export default function ThreeScene() {
       const sphere = new THREE.Mesh(geometry, material)
       sphere.position.set(...cfg.pos)
       sphere.rotation.set(...cfg.rot)
+
+      // Agregar metadatos personalizados
+      sphere.userData = {
+        id: cfg.id,
+      }
+
       scene.add(sphere)
     })
 
@@ -149,15 +155,15 @@ export default function ThreeScene() {
     }
   }
 
-  const removeSphereInView = () => {
+  const removeSphereInView = (): THREE.Mesh | null => {
     if (!currentScene) {
       console.error('No hay escena actual.')
-      return
+      return null
     }
 
     if (!currentCamera) {
       console.error('No hay cámara actual.')
-      return
+      return null
     }
 
     console.log('currentCamera', currentCamera)
@@ -191,13 +197,20 @@ export default function ThreeScene() {
       console.log('Esfera eliminada:', closestSphere)
       setPhotosLeft((prev) => prev - 1)
     }
+
+    return closestSphere
   }
 
   // Función para tomar foto y guardarla en estado como File
   const takePhoto = () => {
     if (!permissionGranted || !currentScene) return
 
-    removeSphereInView()
+    const sphere = removeSphereInView()
+
+    if (!sphere) {
+      console.error('No se encontró la esfera en la vista.')
+      return
+    }
 
     // Buscar la textura de video en la escena
     const videoTexture = currentScene.background as THREE.VideoTexture
@@ -216,7 +229,8 @@ export default function ThreeScene() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], 'photo.png', { type: 'image/png' })
+          const filename = sphere.userData.id || 'photo'
+          const file = new File([blob], `${filename}.png`, { type: 'image/png' })
           setPhotoFiles((prevFiles) => [...prevFiles, file])
           console.log('Foto guardada en el estado:', file)
         } else {
@@ -232,7 +246,7 @@ export default function ThreeScene() {
       const url = URL.createObjectURL(file)
       const a = document.createElement('a')
       a.href = url
-      a.download = file.name
+      a.download = 'photo.png'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
