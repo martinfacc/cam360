@@ -121,76 +121,40 @@ export default function ThreeScene() {
       if (e.matches) {
         // Landscape mode
         setIsLandscape(true)
-        console.log('Landscape mode')
       } else {
         // Portrait mode
         setIsLandscape(false)
-        console.log('Portrait mode')
       }
     })
-
     window.matchMedia('(orientation: portrait)').addEventListener('change', (e) => {
       if (e.matches) {
         // Portrait mode
         setIsPortrait(true)
-        console.log('Portrait mode')
       } else {
         // Landscape mode
         setIsPortrait(false)
-        console.log('Landscape mode')
       }
     })
 
-    // Configurar la luz
-    const light = new THREE.DirectionalLight(0xffffff, 1)
-    light.position.set(5, 5, 5).normalize()
-    scene.add(light)
-    const ambientLight = new THREE.AmbientLight(0x404040, 1) // Soft white light
-    scene.add(ambientLight)
-    // Crear un objeto pivot para la cámara
-    const pivot = new THREE.Object3D()
-    scene.add(pivot)
-    pivot.add(camera)
-    // Posicionar la cámara
-    camera.position.set(0, 0, 0)
-    // Rotar la cámara para que mire hacia adelante
-    camera.rotation.set(0, 0, 0)
-    // Crear un objeto de referencia para la posición de la cámara
-    const cameraPosition = new THREE.Vector3(0, 0, 0)
-    setCurrentCameraPosition({
-      x: cameraPosition.x,
-      y: cameraPosition.y,
-      z: cameraPosition.z,
-    })
-    setCurrentCameraRotation({
-      x: camera.rotation.x,
-      y: camera.rotation.y,
-      z: camera.rotation.z,
-    })
-    // Crear un objeto de referencia para la rotación de la cámara
-    const cameraRotation = new THREE.Quaternion()
-    cameraRotation.setFromEuler(camera.rotation)
-    camera.quaternion.copy(cameraRotation)
-    // Aplicar la rotación inicial a la cámara
-    camera.quaternion.multiply(cameraRotation)
-    // Aplicar la posición inicial a la cámara
-    camera.position.copy(cameraPosition)
+    // Corrección fija para alinear el dispositivo con la escena
+    const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
 
     const animate = () => {
       requestAnimationFrame(animate)
 
-      // Aplicar la calibración: restamos el offset a la lectura actual
+      // Aplicamos la calibración: restamos el offset a la lectura actual
       const calibratedAlpha =
         (orientationData.current.alpha - calibrationRef.current.alpha + 360) % 360
       const calibratedBeta = orientationData.current.beta - calibrationRef.current.beta
-      const calibratedGamma = orientationData.current.gamma - calibrationRef.current.gamma
       // Ignoramos gamma para evitar roll no deseado
+
       // Actualizamos el estado de la orientación
       setCurrentOrientation({
         alpha: calibratedAlpha,
         beta: calibratedBeta,
-        gamma: calibratedGamma,
+        gamma: orientationData.current.gamma,
       })
+
       // Convertir a radianes
       const alphaRad = THREE.MathUtils.degToRad(calibratedAlpha)
       const betaRad = THREE.MathUtils.degToRad(calibratedBeta)
@@ -199,112 +163,45 @@ export default function ThreeScene() {
       const euler = new THREE.Euler(betaRad, alphaRad, 0, 'YXZ')
       const quaternion = new THREE.Quaternion()
       quaternion.setFromEuler(euler)
+
+      // Aplicamos la corrección fija
+      quaternion.multiply(q1)
+
       // Ajustamos según la orientación de la pantalla
       const screenOrientationAngle =
         screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
+
       setCurrentScreenOrientation(screenOrientationAngle)
+
       const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
       const screenTransform = new THREE.Quaternion()
       screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
       quaternion.multiply(screenTransform)
+
       // Asignamos el quaternion resultante a la cámara
       camera.quaternion.copy(quaternion)
-      // Aplicar la posición de la cámara
+
+      // Actualizamos la posición de la cámara
       const cameraPosition = new THREE.Vector3(
         currentCameraPosition.x,
         currentCameraPosition.y,
         currentCameraPosition.z
       )
       cameraPosition.applyQuaternion(quaternion)
-      // Aplicar la rotación de la cámara
-      const cameraRotation = new THREE.Quaternion()
-      cameraRotation.setFromEuler(camera.rotation)
-      cameraRotation.multiply(quaternion)
-      // Aplicar la posición de la cámara
       camera.position.copy(cameraPosition)
-
       setCurrentCameraPosition({
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z,
+        x: cameraPosition.x,
+        y: cameraPosition.y,
+        z: cameraPosition.z,
       })
-
       setCurrentCameraRotation({
-        x: camera.rotation.x,
-        y: camera.rotation.y,
-        z: camera.rotation.z,
+        x: quaternion.x,
+        y: quaternion.y,
+        z: quaternion.z,
       })
 
-      // Renderizar la escena
       renderer.render(scene, camera)
     }
-
-    // // Corrección fija para alinear el dispositivo con la escena
-    // const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
-
-    // const animate = () => {
-    //   requestAnimationFrame(animate)
-
-    //   // Aplicamos la calibración: restamos el offset a la lectura actual
-    //   const calibratedAlpha =
-    //     (orientationData.current.alpha - calibrationRef.current.alpha + 360) % 360
-    //   const calibratedBeta = orientationData.current.beta - calibrationRef.current.beta
-    //   // Ignoramos gamma para evitar roll no deseado
-
-    //   // Actualizamos el estado de la orientación
-    //   setCurrentOrientation({
-    //     alpha: calibratedAlpha,
-    //     beta: calibratedBeta,
-    //     gamma: orientationData.current.gamma,
-    //   })
-
-    //   // Convertir a radianes
-    //   const alphaRad = THREE.MathUtils.degToRad(calibratedAlpha)
-    //   const betaRad = THREE.MathUtils.degToRad(calibratedBeta)
-
-    //   // Creamos un Euler con el orden "YXZ"
-    //   const euler = new THREE.Euler(betaRad, alphaRad, 0, 'YXZ')
-    //   const quaternion = new THREE.Quaternion()
-    //   quaternion.setFromEuler(euler)
-
-    //   // Aplicamos la corrección fija
-    //   quaternion.multiply(q1)
-
-    //   // Ajustamos según la orientación de la pantalla
-    //   const screenOrientationAngle =
-    //     screen.orientation && screen.orientation.angle ? screen.orientation.angle : 0
-
-    //   setCurrentScreenOrientation(screenOrientationAngle)
-
-    //   const screenOrientation = THREE.MathUtils.degToRad(screenOrientationAngle)
-    //   const screenTransform = new THREE.Quaternion()
-    //   screenTransform.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenOrientation)
-    //   quaternion.multiply(screenTransform)
-
-    //   // Asignamos el quaternion resultante a la cámara
-    //   camera.quaternion.copy(quaternion)
-
-    //   // Actualizamos la posición de la cámara
-    //   const cameraPosition = new THREE.Vector3(
-    //     currentCameraPosition.x,
-    //     currentCameraPosition.y,
-    //     currentCameraPosition.z
-    //   )
-    //   cameraPosition.applyQuaternion(quaternion)
-    //   camera.position.copy(cameraPosition)
-    //   setCurrentCameraPosition({
-    //     x: cameraPosition.x,
-    //     y: cameraPosition.y,
-    //     z: cameraPosition.z,
-    //   })
-    //   setCurrentCameraRotation({
-    //     x: quaternion.x,
-    //     y: quaternion.y,
-    //     z: quaternion.z,
-    //   })
-
-    //   renderer.render(scene, camera)
-    // }
     animate()
 
     // Actualizar tamaño al redimensionar
@@ -416,9 +313,9 @@ export default function ThreeScene() {
           <br />
         </p>
         <p>
-          Orientación de la pantalla:
+          Modo de pantalla:
           <br />
-          {isPortrait ? 'Vertical' : isLandscape ? 'Horizontal' : 'Desconocida'}
+          {isPortrait ? 'Vertical' : isLandscape ? 'Horizontal' : 'Desconocido'}
           <br />
         </p>
       </div>
