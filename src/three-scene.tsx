@@ -12,6 +12,7 @@ export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
 
   useEffect(() => {
     const mountNode = mountRef.current
@@ -143,15 +144,34 @@ export default function ThreeScene() {
     }
   }
 
-  // Función para tomar foto (captura el contenido del canvas)
+  // Función para tomar foto y guardarla en estado como File
   const takePhoto = () => {
     if (rendererRef.current) {
       const dataUrl = rendererRef.current.domElement.toDataURL('image/png')
-      const win = window.open()
-      if (win) {
-        win.document.body.innerHTML = `<img src="${dataUrl}" alt="Foto tomada" />`
-      }
+      // Convertir el dataURL a Blob y luego a File
+      fetch(dataUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], 'photo.png', { type: blob.type })
+          setPhotoFiles((prevFiles) => [...prevFiles, file])
+          console.log('Foto guardada en el estado:', file)
+        })
+        .catch(console.error)
     }
+  }
+
+  // Función para descargar las fotos
+  const downloadPhotos = () => {
+    photoFiles.forEach((file) => {
+      const url = URL.createObjectURL(file)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = file.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    })
   }
 
   return (
@@ -192,6 +212,22 @@ export default function ThreeScene() {
         </button>
       )}
 
+      {photoFiles.length > 0 && (
+        <button
+          style={{
+            position: 'absolute',
+            zIndex: 2,
+            bottom: '2rem',
+            right: '2rem',
+            padding: '1rem',
+            fontSize: '1.2rem',
+          }}
+          onClick={downloadPhotos}
+        >
+          Descargar Fotos
+        </button>
+      )}
+
       {/* Aro central para composición */}
       {permissionGranted && (
         <div
@@ -200,8 +236,8 @@ export default function ThreeScene() {
             zIndex: 2,
             top: '50%',
             left: '50%',
-            width: '150px',
-            height: '150px',
+            width: '75px',
+            height: '75px',
             marginLeft: '-75px',
             marginTop: '-75px',
             border: '4px solid rgba(255, 255, 255, 0.8)',
