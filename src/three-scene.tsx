@@ -45,6 +45,16 @@ export default function ThreeScene() {
     squareMesh2.rotation.set(0, Math.PI, 0)
     scene.add(squareMesh2)
 
+    const squareMesh3 = new THREE.Mesh(squareGeometry, squareMaterial)
+    squareMesh3.position.set(0, -25, 0)
+    squareMesh3.rotation.set(Math.PI / 2, 0, 0)
+    scene.add(squareMesh3)
+
+    const squareMesh4 = new THREE.Mesh(squareGeometry, squareMaterial)
+    squareMesh4.position.set(0, 25, 0)
+    squareMesh4.rotation.set(-Math.PI / 2, 0, 0)
+    scene.add(squareMesh4)
+
     // Configurar el feed de la cámara trasera y usarlo como fondo
     const video = document.createElement('video')
     video.autoplay = true
