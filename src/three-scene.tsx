@@ -50,6 +50,27 @@ export default function ThreeScene() {
       scene.add(plane)
     })
 
+    const video = document.createElement('video')
+    video.autoplay = true
+    video.playsInline = true
+    video.muted = true
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { facingMode: { exact: 'environment' } },
+      })
+      .then((stream) => {
+        video.srcObject = stream
+        video.play()
+        const videoTexture = new THREE.VideoTexture(video)
+        videoTexture.minFilter = THREE.LinearFilter
+        videoTexture.magFilter = THREE.LinearFilter
+        videoTexture.format = THREE.RGBFormat
+        scene.background = videoTexture
+      })
+      .catch((err) => {
+        console.error('Error al acceder a la cámara:', err)
+      })
+
     // Variables para almacenar los ángulos convertidos a radianes
     let alpha = 0,
       beta = 0,
