@@ -14,7 +14,6 @@ export function generateUniqueId(): string {
   })
 }
 
-
 /**
  * Genera 'n' puntos en la superficie de una esfera de radio 'r'.
  * Para cada punto se devuelve su posición en 3D y su rotación hacia el centro.
