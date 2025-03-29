@@ -80,23 +80,19 @@ export default function ThreeScene() {
         beta,
         gamma,
       })
+
+      const animate = () => {
+        requestAnimationFrame(animate)
+
+        // Actualizar la posición de la cámara
+        camera.rotation.set(beta, alpha, -gamma)
+
+        renderer.render(scene, camera)
+      }
+      animate()
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
-
-    const animate = () => {
-      requestAnimationFrame(animate)
-
-      // Actualizar la posición de la cámara
-      camera.rotation.set(
-        currentOrientation.beta,
-        currentOrientation.alpha,
-        currentOrientation.gamma
-      )
-
-      renderer.render(scene, camera)
-    }
-    animate()
 
     // Actualizar tamaño al redimensionar
     const onWindowResize = () => {
@@ -115,7 +111,6 @@ export default function ThreeScene() {
         mountNode.removeChild(renderer.domElement)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted])
 
   // Solicitar permiso para acceder a los sensores (requerido en iOS 13+)
@@ -156,6 +151,23 @@ export default function ThreeScene() {
           Habilitar Sensores
         </button>
       )}
+      <div
+        style={{
+          position: 'absolute',
+          zIndex: 1,
+          top: '10px',
+          left: '10px',
+          color: 'white',
+        }}
+      >
+        Orientación:
+        <br />
+        Alpha: {currentOrientation.alpha.toFixed(2)}
+        <br />
+        Beta: {currentOrientation.beta.toFixed(2)}
+        <br />
+        Gamma: {currentOrientation.gamma.toFixed(2)}
+      </div>
       <div ref={mountRef} style={{ width: '100vw', height: '100vh', overflow: 'hidden' }} />
     </React.Fragment>
   )
