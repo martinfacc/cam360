@@ -102,7 +102,7 @@ export default function ThreeScene() {
       requestAnimationFrame(animate)
 
       // Actualizar la posición de la cámara
-      camera.rotation.set(beta, alpha, -gamma)
+      camera.rotation.set(beta, gamma, alpha, 'XYZ')
 
       renderer.render(scene, camera)
     }
