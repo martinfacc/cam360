@@ -4,6 +4,11 @@ import * as THREE from 'three'
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
+  const [currentOrientation, setCurrentOrientation] = useState({
+    alpha: 0,
+    beta: 0,
+    gamma: 0,
+  })
 
   useEffect(() => {
     const mountNode = mountRef.current
@@ -70,14 +75,25 @@ export default function ThreeScene() {
       const beta = THREE.MathUtils.degToRad(event.beta)
       const gamma = THREE.MathUtils.degToRad(event.gamma)
 
-      // Aplicar la rotación a la cámara
-      camera.rotation.set(beta, alpha, -gamma)
+      setCurrentOrientation({
+        alpha,
+        beta,
+        gamma,
+      })
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
 
     const animate = () => {
       requestAnimationFrame(animate)
+
+      // Actualizar la posición de la cámara
+      camera.rotation.set(
+        Math.sin(currentOrientation.alpha) * 5,
+        Math.sin(currentOrientation.beta) * 5,
+        Math.cos(currentOrientation.alpha) * 5
+      )
+
       renderer.render(scene, camera)
     }
     animate()
@@ -99,6 +115,7 @@ export default function ThreeScene() {
         mountNode.removeChild(renderer.domElement)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionGranted])
 
   // Solicitar permiso para acceder a los sensores (requerido en iOS 13+)
