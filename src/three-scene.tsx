@@ -1,6 +1,9 @@
 import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
 
+const DISTANCE = 25
+const SIZE = 5
+
 export default function ThreeScene() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [permissionGranted, setPermissionGranted] = useState(false)
@@ -25,15 +28,27 @@ export default function ThreeScene() {
     renderer.setSize(mountNode.clientWidth, mountNode.clientHeight)
     mountNode.appendChild(renderer.domElement)
 
-    // Agregar un objeto de referencia (ej. un plano)
-    const squareGeometry = new THREE.PlaneGeometry(2, 2)
-    const squareMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      side: THREE.DoubleSide,
+    const positions: Array<{
+      pos: [number, number, number]
+      rot: [number, number, number]
+      color: string
+    }> = [
+      { pos: [0, 0, -DISTANCE], rot: [0, 0, 0], color: 'red' }, // Adelante
+      { pos: [0, 0, DISTANCE], rot: [0, Math.PI, 0], color: 'blue' }, // Atrás
+      { pos: [0, DISTANCE, 0], rot: [-Math.PI / 2, 0, 0], color: 'green' }, // Arriba
+      { pos: [0, -DISTANCE, 0], rot: [Math.PI / 2, 0, 0], color: 'yellow' }, // Abajo
+      { pos: [-DISTANCE, 0, 0], rot: [0, Math.PI / 2, 0], color: 'purple' }, // Izquierda
+      { pos: [DISTANCE, 0, 0], rot: [0, -Math.PI / 2, 0], color: 'orange' }, // Derecha
+    ]
+
+    positions.forEach(({ pos, rot, color }) => {
+      const geometry = new THREE.PlaneGeometry(SIZE, SIZE)
+      const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+      const plane = new THREE.Mesh(geometry, material)
+      plane.position.set(...pos)
+      plane.rotation.set(...rot)
+      scene.add(plane)
     })
-    const squareMesh = new THREE.Mesh(squareGeometry, squareMaterial)
-    squareMesh.position.set(0, 0, -25)
-    scene.add(squareMesh)
 
     // Variables para almacenar los ángulos convertidos a radianes
     let alpha = 0,
