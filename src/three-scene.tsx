@@ -65,7 +65,7 @@ export default function ThreeScene() {
     // })
 
     POSITIONS.forEach((position) => {
-      const { x, y, z } = position
+      const { x, y: z, z: y } = position
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
       const color = getColorFromPosition([x, y, z])
       const material = new THREE.MeshBasicMaterial({
