@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState } from 'react'
 import JSZip from 'jszip'
 import * as THREE from 'three'
-import { getColorFromPosition, getSphereTransforms } from './utils'
+import { generateUniqueId, getColorFromPosition } from './utils'
+import { POSITIONS } from './constants'
 
 const DISTANCE = 5
 const SPHERE_RADIUS = 0.3
@@ -42,22 +43,42 @@ export default function ThreeScene() {
     rendererRef.current = renderer
 
     // Agregar esferas
-    const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
-    sphereTransforms.forEach((cfg) => {
+    // const sphereTransforms = getSphereTransforms(DISTANCE, SPHERE_COUNT)
+    // sphereTransforms.forEach((cfg) => {
+    //   const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
+    //   const color = getColorFromPosition(cfg.pos)
+    //   const material = new THREE.MeshBasicMaterial({
+    //     color,
+    //     transparent: true,
+    //     opacity: SPHERE_OPACITY,
+    //   })
+    //   const sphere = new THREE.Mesh(geometry, material)
+    //   sphere.position.set(...cfg.pos)
+    //   sphere.rotation.set(...cfg.rot)
+
+    //   // Agregar metadatos personalizados
+    //   sphere.userData = {
+    //     id: cfg.id,
+    //   }
+
+    //   scene.add(sphere)
+    // })
+
+    POSITIONS.forEach((position) => {
+      const { x, y, z } = position
       const geometry = new THREE.SphereGeometry(SPHERE_RADIUS, SPHERE_SEGMENTS, SPHERE_SEGMENTS)
-      const color = getColorFromPosition(cfg.pos)
+      const color = getColorFromPosition([x, y, z])
       const material = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
         opacity: SPHERE_OPACITY,
       })
       const sphere = new THREE.Mesh(geometry, material)
-      sphere.position.set(...cfg.pos)
-      sphere.rotation.set(...cfg.rot)
+      sphere.position.set(x, y, z)
 
       // Agregar metadatos personalizados
       sphere.userData = {
-        id: cfg.id,
+        id: generateUniqueId(),
       }
 
       scene.add(sphere)
