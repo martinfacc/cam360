@@ -5,7 +5,7 @@ import { generateUniqueId, getColorFromPosition } from './utils'
 import { POSITIONS } from './constants'
 
 const DISTANCE = 5
-const SPHERE_RADIUS = 0.3
+const SPHERE_RADIUS = 3 / 2
 const SPHERE_SEGMENTS = 16
 const SPHERE_COUNT = 42
 const SPHERE_OPACITY = 0.5
