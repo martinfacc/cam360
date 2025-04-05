@@ -16,11 +16,11 @@ export function generateUniqueId(): string {
 
 /**
  * Genera 'n' puntos en la superficie de una esfera de radio 'r'.
- * Para cada punto se devuelve su posición en 3D y su rotación hacia el centro.
+ * Para cada punto se devuelve su posición en 3D con un ID único.
  *
  * @param r - Radio de la esfera
  * @param n - Cantidad de puntos
- * @returns Array de objetos { pos: [x, y, z], rot: [yaw, pitch, roll] }
+ * @returns Array de objetos { id, pos: [x, y, z] }
  */
 export function getSphereTransforms(r: number, n: number): TSphereTransform[] {
   const puntos: TSphereTransform[] = []
@@ -35,45 +35,47 @@ export function getSphereTransforms(r: number, n: number): TSphereTransform[] {
     const z = radius * Math.sin(theta)
 
     const pos: [number, number, number] = [x * r, y * r, z * r]
-
-    // Direcciones normalizadas hacia el centro
-    const dirX = -x
-    const dirY = -y
-    const dirZ = -z
-
-    // Cálculo de ángulos de rotación
-    const yaw = Math.atan2(dirX, dirZ)
-    const planoXZ = Math.sqrt(dirX * dirX + dirZ * dirZ)
-    const pitch = Math.atan2(dirY, planoXZ)
-    const roll = 0
-
-    const rot: [number, number, number] = [yaw, pitch, roll]
-
-    // Agregamos el punto a la lista con un ID único
     const id = generateUniqueId()
 
-    puntos.push({ id, pos, rot })
+    puntos.push({ id, pos })
   }
 
   return puntos
 }
 
 /**
- * Dada una posición en 3D [x, y, z], genera un color HSL único relacionado con el círculo cromático.
- * Se utiliza la proyección en el plano XZ para calcular el ángulo y mapearlo a un hue entre 0 y 360.
- *
- * @param pos - Tupla [x, y, z] que representa la posición.
- * @returns Un string con el color en formato HSL.
+ * The function `positionToHSL` converts 3D coordinates into an HSL color value.
+ * @param x - The `x`, `y`, and `z` parameters represent the normalized coordinates in a 3D space. The
+ * values should be between -1 and 1, where:
+ * @param y - The `y` parameter in the `positionToHSL` function represents the vertical position in a
+ * 3D space. It is used to calculate the hue value for the HSL color based on its interpolation between
+ * yellow and blue (60 to 240 degrees).
+ * @param z - The `z` parameter in the `positionToHSL` function represents the position along the
+ * Z-axis in a 3D space. This function takes three parameters `x`, `y`, and `z`, which are the
+ * coordinates in a 3D space. The function then calculates the average
+ * @returns The function `positionToHSL` takes three parameters `x`, `y`, and `z`, which represent
+ * positions in a 3D space. It then calculates the average hue based on these positions and returns an
+ * HSL color string with the calculated hue, a fixed saturation of 70%, and a lightness of 50%.
  */
-export function getColorFromPosition(pos: [number, number, number]): string {
-  const [x, , z] = pos
-  // Calculamos el ángulo en el plano XZ (rango [-π, π])
-  const angle = Math.atan2(z, x)
-  // Convertimos a grados
-  let hue = (angle * 180) / Math.PI
-  // Normalizamos para que el hue esté entre 0 y 360
-  if (hue < 0) hue += 360
+export function positionToHSL(x: number, y: number, z: number): string {
+  // Aseguramos que los valores estén entre -1 y 1
+  x = Math.max(-1, Math.min(1, x));
+  y = Math.max(-1, Math.min(1, y));
+  z = Math.max(-1, Math.min(1, z));
 
-  // Se pueden ajustar la saturación y luminosidad a gusto, aquí se usan valores fijos.
-  return `hsl(${hue}, 70%, 50%)`
+  // Interpolación de hue para cada eje
+  const hueX = ((x + 1) / 2) * 120;      // Rojo (0) ↔ Verde (120)
+  const hueY = ((y + 1) / 2) * 180 + 60; // Amarillo (60) ↔ Azul (240)
+  const hueZ = ((z + 1) / 2) * 120 + 300; // Magenta (300) ↔ Cian (180)
+  const hueZWrapped = hueZ % 360;        // Asegura que no pase de 360°
+
+  // Promedio circular
+  const hues = [hueX, hueY, hueZWrapped];
+  const radians = hues.map(h => h * Math.PI / 180);
+  const avgSin = radians.reduce((sum, r) => sum + Math.sin(r), 0) / 3;
+  const avgCos = radians.reduce((sum, r) => sum + Math.cos(r), 0) / 3;
+  let avgHue = Math.atan2(avgSin, avgCos) * 180 / Math.PI;
+  if (avgHue < 0) avgHue += 360;
+
+  return `hsl(${avgHue.toFixed(2)}, 70%, 50%)`;
 }
