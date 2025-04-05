@@ -1,3 +1,9 @@
+export const DISTANCE = 5
+export const SPHERE_RADIUS = 0.3
+export const SPHERE_SEGMENTS = 16
+export const SPHERE_COUNT = 32
+export const SPHERE_OPACITY = 0.5
+
 export const POSITIONS: Array<{
   x: number
   y: number
