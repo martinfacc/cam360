@@ -7,6 +7,7 @@ import PhotoCaptureButton from './components/photo-capture-button'
 import EnableSensorsButton from './components/enable-sensors-button'
 import PhotoDownloaderButton from './components/photo-downloader-button'
 import FocusRing from './components/focus-ring'
+import AutoCaptureNotifier from './components/auto-capture-notifier'
 
 export default function ThreeScene() {
   // Extraemos las referencias y métodos necesarios del contexto de la aplicación.
@@ -195,6 +196,7 @@ export default function ThreeScene() {
   // Renderiza los componentes de UI y el contenedor donde se renderiza la escena 3D.
   return (
     <>
+      <AutoCaptureNotifier />
       <EnableSensorsButton />
       <PhotoCaptureButton />
       <PhotoDownloaderButton />

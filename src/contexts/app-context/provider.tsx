@@ -12,6 +12,7 @@ export const AppProvider = (props: { children: ReactNode }) => {
   const [currentCamera, setCurrentCamera] = useState<THREE.PerspectiveCamera | null>(null)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const [photosLeft, setPhotosLeft] = useState<number>(SPHERE_COUNT)
+  const [overSphere, setOverSphere] = useState(false)
 
   const values = useMemo(
     () => ({
@@ -27,8 +28,19 @@ export const AppProvider = (props: { children: ReactNode }) => {
       setPhotoFiles,
       photosLeft,
       setPhotosLeft,
+      overSphere,
+      setOverSphere,
     }),
-    [mountRef, rendererRef, permissionGranted, currentScene, currentCamera, photoFiles, photosLeft]
+    [
+      mountRef,
+      rendererRef,
+      permissionGranted,
+      currentScene,
+      currentCamera,
+      photoFiles,
+      photosLeft,
+      overSphere,
+    ]
   )
 
   return <AppContext.Provider value={values}>{children}</AppContext.Provider>

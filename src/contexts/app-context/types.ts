@@ -14,4 +14,6 @@ export type TAppContext = {
   setPhotoFiles: React.Dispatch<React.SetStateAction<File[]>>
   photosLeft: number
   setPhotosLeft: React.Dispatch<React.SetStateAction<number>>
+  overSphere: boolean
+  setOverSphere: React.Dispatch<React.SetStateAction<boolean>>
 }
